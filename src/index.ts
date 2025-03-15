@@ -295,7 +295,7 @@ function getErrorMessage(error: unknown): string {
 
 async function exportResultsToJson(results: FilterResults, outputDir: string): Promise<void> {
   try {
-    await fs.promises.mkdir(outputDir, { recursive: true })
+    await fs.promises.mkdir(outputDir, {recursive: true})
 
     for (const [key, files] of Object.entries(results)) {
       const filterPath = `${outputDir}/${key}.json`
