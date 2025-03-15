@@ -1,5 +1,8 @@
 # Changelog
 
+## [v3.2.0](https://github.com/tapihdev/paths-filter/compare/v3.1...v3.2.0) - 2025-03-15
+- feat: output json by @tapih in https://github.com/tapihdev/paths-filter/pull/5
+
 ## [v3.1.0](https://github.com/tapihdev/paths-filter/commits/v3.1.0) - 2025-03-15
 - chore: maintenance by @tapih in https://github.com/tapihdev/paths-filter/pull/1
 - chore: v3.1.0 by @tapih in https://github.com/tapihdev/paths-filter/pull/4
