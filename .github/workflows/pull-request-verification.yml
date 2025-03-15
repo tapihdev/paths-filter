@@ -143,3 +143,51 @@ jobs:
         || steps.filter.outputs.modified_files != 'LICENSE'
         || steps.filter.outputs.deleted_files != 'README.md'
       run: exit 1
+
+  test-json-output:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Create test files
+      run: |
+        mkdir -p frontend/src backend/src
+        touch frontend/src/app.ts frontend/src/index.ts
+        touch backend/src/main.ts
+    - name: Add files
+      run: git add .
+    - uses: ./
+      id: filter
+      with:
+        base: HEAD
+        filters: |
+          frontend:
+            - 'frontend/**'
+          backend:
+            - 'backend/**'
+        json-output: true
+    - name: Verify JSON output
+      run: |
+        # Verify frontend JSON
+        FRONTEND_FILES=$(cat /tmp/paths-filter/frontend.json)
+        EXPECTED_FRONTEND='[
+          "frontend/src/app.ts",
+          "frontend/src/index.ts"
+        ]'
+        if [ "$(echo $FRONTEND_FILES | jq -c 'sort')" != "$(echo $EXPECTED_FRONTEND | jq -c 'sort')" ]; then
+          echo "Frontend files do not match expected output"
+          echo "Got: $FRONTEND_FILES"
+          echo "Expected: $EXPECTED_FRONTEND"
+          exit 1
+        fi
+
+        # Verify backend JSON
+        BACKEND_FILES=$(cat /tmp/paths-filter/backend.json)
+        EXPECTED_BACKEND='[
+          "backend/src/main.ts"
+        ]'
+        if [ "$(echo $BACKEND_FILES | jq -c 'sort')" != "$(echo $EXPECTED_BACKEND | jq -c 'sort')" ]; then
+          echo "Backend files do not match expected output"
+          echo "Got: $BACKEND_FILES"
+          echo "Expected: $EXPECTED_BACKEND"
+          exit 1
+        fi
