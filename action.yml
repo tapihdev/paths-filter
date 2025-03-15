@@ -1,13 +1,13 @@
-name: 'Paths Changes Filter'
-description: 'Execute your workflow steps only if relevant files are modified.'
-author: ''
+name: "Paths Changes Filter Extended"
+description: "Execute your workflow steps only if relevant files are modified."
+author: ""
 inputs:
   token:
-    description: 'GitHub Access Token'
+    description: "GitHub Access Token"
     required: false
     default: ${{ github.token }}
   working-directory:
-    description: 'Relative path under $GITHUB_WORKSPACE where the repository was checked out.'
+    description: "Relative path under $GITHUB_WORKSPACE where the repository was checked out."
     required: false
   ref:
     description: |
@@ -21,7 +21,7 @@ inputs:
       This option is ignored if action is triggered by pull_request event.
     required: false
   filters:
-    description: 'Path to the configuration file or YAML string with filters definition'
+    description: "Path to the configuration file or YAML string with filters definition"
     required: true
   list-files:
     description: |
@@ -37,13 +37,13 @@ inputs:
     required: false
     default: none
   json-output:
-    description: 'Enable JSON output for filter results'
+    description: "Enable JSON output for filter results"
     required: false
-    default: 'false'
+    default: "false"
   json-output-dir:
     description: 'Directory where JSON files will be written. Defaults to "path-filter-results"'
     required: false
-    default: '/tmp/paths-filter'
+    default: "/tmp/paths-filter"
   initial-fetch-depth:
     description: |
       How many commits are initially fetched from base branch.
@@ -51,13 +51,13 @@ inputs:
       until the merge-base is found or there are no more commits in the history.
       This option takes effect only when changes are detected using git against different base branch.
     required: false
-    default: '100'
+    default: "100"
 outputs:
   changes:
     description: JSON array with names of all filters matching any of changed files
 runs:
-  using: 'node20'
-  main: 'dist/index.js'
+  using: "node20"
+  main: "dist/index.js"
 branding:
   color: blue
   icon: filter
