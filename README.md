@@ -163,6 +163,13 @@ For more information, see [CHANGELOG](https://github.com/tapihdev/paths-filter/b
     #  - '!**/*.jpeg'
     #  - '!**/*.md'
     predicate-quantifier: 'some'
+
+    # Enable JSON output for filter results
+    json-output: 'false'
+
+    # Directory where JSON files will be written when json-output is true
+    # Defaults to "/tmp/paths-filter"
+    json-output-dir: 'path-filter-results'
 ```
 
 ## Outputs
@@ -551,6 +558,31 @@ jobs:
 ```
 
 </details>
+
+### JSON Output Format
+
+When `json-output` is set to `true`, the action will create individual JSON files for each filter in the specified `json-output-dir` (defaults to "/tmp/paths-filter"). For example:
+
+```json
+// /tmp/paths-filter/frontend.json
+[
+  "frontend/src/app.ts",
+  "frontend/src/index.ts"
+]
+```
+
+Example usage:
+```yaml
+- uses: tapihdev/paths-filter@v3
+  with:
+    filters: |
+      frontend:
+        - 'frontend/**'
+      backend:
+        - 'backend/**'
+    json-output: true
+    json-output-dir: '/path/to/output'  # Optional, defaults to "/tmp/paths-filter"
+```
 
 ## See also
 
