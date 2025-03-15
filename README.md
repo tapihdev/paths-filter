@@ -73,7 +73,7 @@ For more scenarios see [examples](#examples) section.
 - Improved listing of matching files with `list-files: shell` and `list-files: escape` options
 - Paths expressions are now evaluated using [picomatch](https://github.com/micromatch/picomatch) library
 
-For more information, see [CHANGELOG](https://github.com/tapihdev/paths-filter/blob/master/CHANGELOG.md)
+For more information, see [CHANGELOG](https://github.com/tapihdev/paths-filter/blob/main/CHANGELOG.md)
 
 ## Usage
 
@@ -105,7 +105,7 @@ For more information, see [CHANGELOG](https://github.com/tapihdev/paths-filter/b
     # All files are considered as added if there is no common ancestor with
     # base branch or no previous commit.
     # This option is ignored if action is triggered by pull_request event.
-    # Default: repository default branch (e.g. master)
+    # Default: repository default branch (e.g. main)
     base: ''
 
     # Git reference (e.g. branch name) from which the changes will be detected.
@@ -309,7 +309,7 @@ jobs:
 on:
   pull_request:
     branches: # PRs to the following branches will trigger the workflow
-      - master
+      - main
       - develop
 jobs:
   build:
@@ -360,7 +360,7 @@ jobs:
 on:
   push:
     branches: # Push to the following branches will trigger the workflow
-      - master
+      - main
       - develop
       - release/**
 jobs:
@@ -372,7 +372,7 @@ jobs:
       id: filter
       with:
         # Use context to get the branch where commits were pushed.
-        # If there is only one long-lived branch (e.g. master),
+        # If there is only one long-lived branch (e.g. main),
         # you can specify it directly.
         # If it's not configured, the repository default branch is used.
         base: ${{ github.ref }}
@@ -388,7 +388,7 @@ jobs:
 on:
   push:
     branches: # Push to following branches will trigger the workflow
-      - master
+      - main
       - develop
       - release/**
 jobs:
@@ -558,4 +558,4 @@ jobs:
 
 ## License
 
-The scripts and documentation in this project are released under the [MIT License](https://github.com/tapihdev/paths-filter/blob/master/LICENSE)
+The scripts and documentation in this project are released under the [MIT License](https://github.com/tapihdev/paths-filter/blob/main/LICENSE)
