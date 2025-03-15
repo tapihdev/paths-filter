@@ -1,5 +1,8 @@
 # Changelog
 
+## [v3.2.1](https://github.com/tapihdev/paths-filter/compare/v3.2...v3.2.1) - 2025-03-15
+- chore: rename action to publish action to marketplace by @tapih in https://github.com/tapihdev/paths-filter/pull/7
+
 ## [v3.2.0](https://github.com/tapihdev/paths-filter/compare/v3.1...v3.2.0) - 2025-03-15
 - feat: output json by @tapih in https://github.com/tapihdev/paths-filter/pull/5
 
