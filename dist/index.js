@@ -1,807 +1,5 @@
-/******/ (() => { // webpackBootstrap
+require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
-
-/***/ 4014:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ChangeStatus = void 0;
-var ChangeStatus;
-(function (ChangeStatus) {
-    ChangeStatus["Added"] = "added";
-    ChangeStatus["Copied"] = "copied";
-    ChangeStatus["Deleted"] = "deleted";
-    ChangeStatus["Modified"] = "modified";
-    ChangeStatus["Renamed"] = "renamed";
-    ChangeStatus["Unmerged"] = "unmerged";
-})(ChangeStatus || (exports.ChangeStatus = ChangeStatus = {}));
-
-
-/***/ }),
-
-/***/ 3707:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Filter = exports.isPredicateQuantifier = exports.SUPPORTED_PREDICATE_QUANTIFIERS = exports.PredicateQuantifier = void 0;
-const jsyaml = __importStar(__nccwpck_require__(1917));
-const picomatch_1 = __importDefault(__nccwpck_require__(8569));
-// Minimatch options used in all matchers
-const MatchOptions = {
-    dot: true
-};
-/**
- * Enumerates the possible logic quantifiers that can be used when determining
- * if a file is a match or not with multiple patterns.
- *
- * The YAML configuration property that is parsed into one of these values is
- * 'predicate-quantifier' on the top level of the configuration object of the
- * action.
- *
- * The default is to use 'some' which used to be the hardcoded behavior prior to
- * the introduction of the new mechanism.
- *
- * @see https://en.wikipedia.org/wiki/Quantifier_(logic)
- */
-var PredicateQuantifier;
-(function (PredicateQuantifier) {
-    /**
-     * When choosing 'every' in the config it means that files will only get matched
-     * if all the patterns are satisfied by the path of the file, not just at least one of them.
-     */
-    PredicateQuantifier["EVERY"] = "every";
-    /**
-     * When choosing 'some' in the config it means that files will get matched as long as there is
-     * at least one pattern that matches them. This is the default behavior if you don't
-     * specify anything as a predicate quantifier.
-     */
-    PredicateQuantifier["SOME"] = "some";
-})(PredicateQuantifier || (exports.PredicateQuantifier = PredicateQuantifier = {}));
-/**
- * An array of strings (at runtime) that contains the valid/accepted values for
- * the configuration parameter 'predicate-quantifier'.
- */
-exports.SUPPORTED_PREDICATE_QUANTIFIERS = Object.values(PredicateQuantifier);
-function isPredicateQuantifier(x) {
-    return exports.SUPPORTED_PREDICATE_QUANTIFIERS.includes(x);
-}
-exports.isPredicateQuantifier = isPredicateQuantifier;
-class Filter {
-    // Creates instance of Filter and load rules from YAML if it's provided
-    constructor(yaml, filterConfig) {
-        this.filterConfig = filterConfig;
-        this.rules = {};
-        if (yaml) {
-            this.load(yaml);
-        }
-    }
-    // Load rules from YAML string
-    load(yaml) {
-        if (!yaml) {
-            return;
-        }
-        const doc = jsyaml.load(yaml);
-        if (typeof doc !== 'object') {
-            this.throwInvalidFormatError('Root element is not an object');
-        }
-        for (const [key, item] of Object.entries(doc)) {
-            this.rules[key] = this.parseFilterItemYaml(item);
-        }
-    }
-    match(files) {
-        const result = {};
-        for (const [key, patterns] of Object.entries(this.rules)) {
-            result[key] = files.filter(file => this.isMatch(file, patterns));
-        }
-        return result;
-    }
-    isMatch(file, patterns) {
-        var _a;
-        const aPredicate = (rule) => {
-            return (rule.status === undefined || rule.status.includes(file.status)) && rule.isMatch(file.filename);
-        };
-        if (((_a = this.filterConfig) === null || _a === void 0 ? void 0 : _a.predicateQuantifier) === 'every') {
-            return patterns.every(aPredicate);
-        }
-        else {
-            return patterns.some(aPredicate);
-        }
-    }
-    parseFilterItemYaml(item) {
-        if (Array.isArray(item)) {
-            return flat(item.map(i => this.parseFilterItemYaml(i)));
-        }
-        if (typeof item === 'string') {
-            return [{ status: undefined, isMatch: (0, picomatch_1.default)(item, MatchOptions) }];
-        }
-        if (typeof item === 'object') {
-            return Object.entries(item).map(([key, pattern]) => {
-                if (typeof key !== 'string' || (typeof pattern !== 'string' && !Array.isArray(pattern))) {
-                    this.throwInvalidFormatError(`Expected [key:string]= pattern:string | string[], but [${key}:${typeof key}]= ${pattern}:${typeof pattern} found`);
-                }
-                return {
-                    status: key
-                        .split('|')
-                        .map(x => x.trim())
-                        .filter(x => x.length > 0)
-                        .map(x => x.toLowerCase()),
-                    isMatch: (0, picomatch_1.default)(pattern, MatchOptions)
-                };
-            });
-        }
-        this.throwInvalidFormatError(`Unexpected element type '${typeof item}'`);
-    }
-    throwInvalidFormatError(message) {
-        throw new Error(`Invalid filter YAML format: ${message}.`);
-    }
-}
-exports.Filter = Filter;
-// Creates a new array with all sub-array elements concatenated
-// In future could be replaced by Array.prototype.flat (supported on Node.js 11+)
-function flat(arr) {
-    return arr.reduce((acc, val) => acc.concat(val), []);
-}
-
-
-/***/ }),
-
-/***/ 3374:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isGitSha = exports.getShortName = exports.getCurrentRef = exports.listAllFilesAsAdded = exports.parseGitDiffOutput = exports.getChangesSinceMergeBase = exports.getChangesOnHead = exports.getChanges = exports.getChangesInLastCommit = exports.HEAD = exports.NULL_SHA = void 0;
-const exec_1 = __nccwpck_require__(1514);
-const core = __importStar(__nccwpck_require__(2186));
-const file_1 = __nccwpck_require__(4014);
-exports.NULL_SHA = '0000000000000000000000000000000000000000';
-exports.HEAD = 'HEAD';
-async function getChangesInLastCommit() {
-    core.startGroup(`Change detection in last commit`);
-    let output = '';
-    try {
-        output = (await (0, exec_1.getExecOutput)('git', ['log', '--format=', '--no-renames', '--name-status', '-z', '-n', '1'])).stdout;
-    }
-    finally {
-        fixStdOutNullTermination();
-        core.endGroup();
-    }
-    return parseGitDiffOutput(output);
-}
-exports.getChangesInLastCommit = getChangesInLastCommit;
-async function getChanges(base, head) {
-    const baseRef = await ensureRefAvailable(base);
-    const headRef = await ensureRefAvailable(head);
-    // Get differences between ref and HEAD
-    core.startGroup(`Change detection ${base}..${head}`);
-    let output = '';
-    try {
-        // Two dots '..' change detection - directly compares two versions
-        output = (await (0, exec_1.getExecOutput)('git', ['diff', '--no-renames', '--name-status', '-z', `${baseRef}..${headRef}`]))
-            .stdout;
-    }
-    finally {
-        fixStdOutNullTermination();
-        core.endGroup();
-    }
-    return parseGitDiffOutput(output);
-}
-exports.getChanges = getChanges;
-async function getChangesOnHead() {
-    // Get current changes - both staged and unstaged
-    core.startGroup(`Change detection on HEAD`);
-    let output = '';
-    try {
-        output = (await (0, exec_1.getExecOutput)('git', ['diff', '--no-renames', '--name-status', '-z', 'HEAD'])).stdout;
-    }
-    finally {
-        fixStdOutNullTermination();
-        core.endGroup();
-    }
-    return parseGitDiffOutput(output);
-}
-exports.getChangesOnHead = getChangesOnHead;
-async function getChangesSinceMergeBase(base, head, initialFetchDepth) {
-    let baseRef;
-    let headRef;
-    async function hasMergeBase() {
-        if (baseRef === undefined || headRef === undefined) {
-            return false;
-        }
-        return (await (0, exec_1.getExecOutput)('git', ['merge-base', baseRef, headRef], { ignoreReturnCode: true })).exitCode === 0;
-    }
-    let noMergeBase = false;
-    core.startGroup(`Searching for merge-base ${base}...${head}`);
-    try {
-        baseRef = await getLocalRef(base);
-        headRef = await getLocalRef(head);
-        if (!(await hasMergeBase())) {
-            await (0, exec_1.getExecOutput)('git', ['fetch', '--no-tags', `--depth=${initialFetchDepth}`, 'origin', base, head]);
-            if (baseRef === undefined || headRef === undefined) {
-                baseRef = baseRef !== null && baseRef !== void 0 ? baseRef : (await getLocalRef(base));
-                headRef = headRef !== null && headRef !== void 0 ? headRef : (await getLocalRef(head));
-                if (baseRef === undefined || headRef === undefined) {
-                    await (0, exec_1.getExecOutput)('git', ['fetch', '--tags', '--depth=1', 'origin', base, head], {
-                        ignoreReturnCode: true // returns exit code 1 if tags on remote were updated - we can safely ignore it
-                    });
-                    baseRef = baseRef !== null && baseRef !== void 0 ? baseRef : (await getLocalRef(base));
-                    headRef = headRef !== null && headRef !== void 0 ? headRef : (await getLocalRef(head));
-                    if (baseRef === undefined) {
-                        throw new Error(`Could not determine what is ${base} - fetch works but it's not a branch, tag or commit SHA`);
-                    }
-                    if (headRef === undefined) {
-                        throw new Error(`Could not determine what is ${head} - fetch works but it's not a branch, tag or commit SHA`);
-                    }
-                }
-            }
-            let depth = initialFetchDepth;
-            let lastCommitCount = await getCommitCount();
-            while (!(await hasMergeBase())) {
-                depth = Math.min(depth * 2, Number.MAX_SAFE_INTEGER);
-                await (0, exec_1.getExecOutput)('git', ['fetch', `--deepen=${depth}`, 'origin', base, head]);
-                const commitCount = await getCommitCount();
-                if (commitCount === lastCommitCount) {
-                    core.info('No more commits were fetched');
-                    core.info('Last attempt will be to fetch full history');
-                    await (0, exec_1.getExecOutput)('git', ['fetch']);
-                    if (!(await hasMergeBase())) {
-                        noMergeBase = true;
-                    }
-                    break;
-                }
-                lastCommitCount = commitCount;
-            }
-        }
-    }
-    finally {
-        core.endGroup();
-    }
-    // Three dots '...' change detection - finds merge-base and compares against it
-    let diffArg = `${baseRef}...${headRef}`;
-    if (noMergeBase) {
-        core.warning('No merge base found - change detection will use direct <commit>..<commit> comparison');
-        diffArg = `${baseRef}..${headRef}`;
-    }
-    // Get changes introduced on ref compared to base
-    core.startGroup(`Change detection ${diffArg}`);
-    let output = '';
-    try {
-        output = (await (0, exec_1.getExecOutput)('git', ['diff', '--no-renames', '--name-status', '-z', diffArg])).stdout;
-    }
-    finally {
-        fixStdOutNullTermination();
-        core.endGroup();
-    }
-    return parseGitDiffOutput(output);
-}
-exports.getChangesSinceMergeBase = getChangesSinceMergeBase;
-function parseGitDiffOutput(output) {
-    const tokens = output.split('\u0000').filter(s => s.length > 0);
-    const files = [];
-    for (let i = 0; i + 1 < tokens.length; i += 2) {
-        files.push({
-            status: statusMap[tokens[i]],
-            filename: tokens[i + 1]
-        });
-    }
-    return files;
-}
-exports.parseGitDiffOutput = parseGitDiffOutput;
-async function listAllFilesAsAdded() {
-    core.startGroup('Listing all files tracked by git');
-    let output = '';
-    try {
-        output = (await (0, exec_1.getExecOutput)('git', ['ls-files', '-z'])).stdout;
-    }
-    finally {
-        fixStdOutNullTermination();
-        core.endGroup();
-    }
-    return output
-        .split('\u0000')
-        .filter(s => s.length > 0)
-        .map(path => ({
-        status: file_1.ChangeStatus.Added,
-        filename: path
-    }));
-}
-exports.listAllFilesAsAdded = listAllFilesAsAdded;
-async function getCurrentRef() {
-    core.startGroup(`Get current git ref`);
-    try {
-        const branch = (await (0, exec_1.getExecOutput)('git', ['branch', '--show-current'])).stdout.trim();
-        if (branch) {
-            return branch;
-        }
-        const describe = await (0, exec_1.getExecOutput)('git', ['describe', '--tags', '--exact-match'], { ignoreReturnCode: true });
-        if (describe.exitCode === 0) {
-            return describe.stdout.trim();
-        }
-        return (await (0, exec_1.getExecOutput)('git', ['rev-parse', exports.HEAD])).stdout.trim();
-    }
-    finally {
-        core.endGroup();
-    }
-}
-exports.getCurrentRef = getCurrentRef;
-function getShortName(ref) {
-    if (!ref)
-        return '';
-    const heads = 'refs/heads/';
-    const tags = 'refs/tags/';
-    if (ref.startsWith(heads))
-        return ref.slice(heads.length);
-    if (ref.startsWith(tags))
-        return ref.slice(tags.length);
-    return ref;
-}
-exports.getShortName = getShortName;
-function isGitSha(ref) {
-    return /^[a-z0-9]{40}$/.test(ref);
-}
-exports.isGitSha = isGitSha;
-async function hasCommit(ref) {
-    return (await (0, exec_1.getExecOutput)('git', ['cat-file', '-e', `${ref}^{commit}`], { ignoreReturnCode: true })).exitCode === 0;
-}
-async function getCommitCount() {
-    const output = (await (0, exec_1.getExecOutput)('git', ['rev-list', '--count', '--all'])).stdout;
-    const count = parseInt(output);
-    return isNaN(count) ? 0 : count;
-}
-async function getLocalRef(shortName) {
-    if (isGitSha(shortName)) {
-        return (await hasCommit(shortName)) ? shortName : undefined;
-    }
-    const output = (await (0, exec_1.getExecOutput)('git', ['show-ref', shortName], { ignoreReturnCode: true })).stdout;
-    const refs = output
-        .split(/\r?\n/g)
-        .map(l => l.match(/refs\/(?:(?:heads)|(?:tags)|(?:remotes\/origin))\/(.*)$/))
-        .filter(match => match !== null && match[1] === shortName)
-        .map(match => { var _a; return (_a = match === null || match === void 0 ? void 0 : match[0]) !== null && _a !== void 0 ? _a : ''; }); // match can't be null here but compiler doesn't understand that
-    if (refs.length === 0) {
-        return undefined;
-    }
-    const remoteRef = refs.find(ref => ref.startsWith('refs/remotes/origin/'));
-    if (remoteRef) {
-        return remoteRef;
-    }
-    return refs[0];
-}
-async function ensureRefAvailable(name) {
-    core.startGroup(`Ensuring ${name} is fetched from origin`);
-    try {
-        let ref = await getLocalRef(name);
-        if (ref === undefined) {
-            await (0, exec_1.getExecOutput)('git', ['fetch', '--depth=1', '--no-tags', 'origin', name]);
-            ref = await getLocalRef(name);
-            if (ref === undefined) {
-                await (0, exec_1.getExecOutput)('git', ['fetch', '--depth=1', '--tags', 'origin', name]);
-                ref = await getLocalRef(name);
-                if (ref === undefined) {
-                    throw new Error(`Could not determine what is ${name} - fetch works but it's not a branch, tag or commit SHA`);
-                }
-            }
-        }
-        return ref;
-    }
-    finally {
-        core.endGroup();
-    }
-}
-function fixStdOutNullTermination() {
-    // Previous command uses NULL as delimiters and output is printed to stdout.
-    // We have to make sure next thing written to stdout will start on new line.
-    // Otherwise things like ::set-output wouldn't work.
-    core.info('');
-}
-const statusMap = {
-    A: file_1.ChangeStatus.Added,
-    C: file_1.ChangeStatus.Copied,
-    D: file_1.ChangeStatus.Deleted,
-    M: file_1.ChangeStatus.Modified,
-    R: file_1.ChangeStatus.Renamed,
-    U: file_1.ChangeStatus.Unmerged
-};
-
-
-/***/ }),
-
-/***/ 7402:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.csvEscape = void 0;
-// Returns filename escaped for CSV
-// Wraps file name into "..." only when it contains some potentially unsafe character
-function csvEscape(value) {
-    if (value === '')
-        return value;
-    // Only safe characters
-    if (/^[a-zA-Z0-9._+:@%/-]+$/m.test(value)) {
-        return value;
-    }
-    // https://tools.ietf.org/html/rfc4180
-    // If double-quotes are used to enclose fields, then a double-quote
-    // appearing inside a field must be escaped by preceding it with
-    // another double quote
-    return `"${value.replace(/"/g, '""')}"`;
-}
-exports.csvEscape = csvEscape;
-
-
-/***/ }),
-
-/***/ 4613:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.shellEscape = exports.backslashEscape = void 0;
-// Backslash escape every character except small subset of definitely safe characters
-function backslashEscape(value) {
-    return value.replace(/([^a-zA-Z0-9,._+:@%/-])/gm, '\\$1');
-}
-exports.backslashEscape = backslashEscape;
-// Returns filename escaped for usage as shell argument.
-// Applies "human readable" approach with as few escaping applied as possible
-function shellEscape(value) {
-    if (value === '')
-        return value;
-    // Only safe characters
-    if (/^[a-zA-Z0-9,._+:@%/-]+$/m.test(value)) {
-        return value;
-    }
-    if (value.includes("'")) {
-        // Only safe characters, single quotes and white-spaces
-        if (/^[a-zA-Z0-9,._+:@%/'\s-]+$/m.test(value)) {
-            return `"${value}"`;
-        }
-        // Split by single quote and apply escaping recursively
-        return value.split("'").map(shellEscape).join("\\'");
-    }
-    // Contains some unsafe characters but no single quote
-    return `'${value}'`;
-}
-exports.shellEscape = shellEscape;
-
-
-/***/ }),
-
-/***/ 3109:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const fs = __importStar(__nccwpck_require__(7147));
-const core = __importStar(__nccwpck_require__(2186));
-const github = __importStar(__nccwpck_require__(5438));
-const filter_1 = __nccwpck_require__(3707);
-const file_1 = __nccwpck_require__(4014);
-const git = __importStar(__nccwpck_require__(3374));
-const shell_escape_1 = __nccwpck_require__(4613);
-const csv_escape_1 = __nccwpck_require__(7402);
-async function run() {
-    try {
-        const workingDirectory = core.getInput('working-directory', { required: false });
-        if (workingDirectory) {
-            process.chdir(workingDirectory);
-        }
-        const token = core.getInput('token', { required: false });
-        const ref = core.getInput('ref', { required: false });
-        const base = core.getInput('base', { required: false });
-        const filtersInput = core.getInput('filters', { required: true });
-        const filtersYaml = isPathInput(filtersInput) ? getConfigFileContent(filtersInput) : filtersInput;
-        const listFiles = core.getInput('list-files', { required: false }).toLowerCase() || 'none';
-        const initialFetchDepth = parseInt(core.getInput('initial-fetch-depth', { required: false })) || 10;
-        const predicateQuantifier = core.getInput('predicate-quantifier', { required: false }) || filter_1.PredicateQuantifier.SOME;
-        if (!isExportFormat(listFiles)) {
-            core.setFailed(`Input parameter 'list-files' is set to invalid value '${listFiles}'`);
-            return;
-        }
-        if (!(0, filter_1.isPredicateQuantifier)(predicateQuantifier)) {
-            const predicateQuantifierInvalidErrorMsg = `Input parameter 'predicate-quantifier' is set to invalid value ` +
-                `'${predicateQuantifier}'. Valid values: ${filter_1.SUPPORTED_PREDICATE_QUANTIFIERS.join(', ')}`;
-            throw new Error(predicateQuantifierInvalidErrorMsg);
-        }
-        const filterConfig = { predicateQuantifier };
-        const filter = new filter_1.Filter(filtersYaml, filterConfig);
-        const files = await getChangedFiles(token, base, ref, initialFetchDepth);
-        core.info(`Detected ${files.length} changed files`);
-        const results = filter.match(files);
-        exportResults(results, listFiles);
-    }
-    catch (error) {
-        core.setFailed(getErrorMessage(error));
-    }
-}
-function isPathInput(text) {
-    return !(text.includes('\n') || text.includes(':'));
-}
-function getConfigFileContent(configPath) {
-    if (!fs.existsSync(configPath)) {
-        throw new Error(`Configuration file '${configPath}' not found`);
-    }
-    if (!fs.lstatSync(configPath).isFile()) {
-        throw new Error(`'${configPath}' is not a file.`);
-    }
-    return fs.readFileSync(configPath, { encoding: 'utf8' });
-}
-async function getChangedFiles(token, base, ref, initialFetchDepth) {
-    var _a, _b;
-    // if base is 'HEAD' only local uncommitted changes will be detected
-    // This is the simplest case as we don't need to fetch more commits or evaluate current/before refs
-    if (base === git.HEAD) {
-        if (ref) {
-            core.warning(`'ref' input parameter is ignored when 'base' is set to HEAD`);
-        }
-        return await git.getChangesOnHead();
-    }
-    const prEvents = ['pull_request', 'pull_request_review', 'pull_request_review_comment', 'pull_request_target'];
-    if (prEvents.includes(github.context.eventName)) {
-        if (ref) {
-            core.warning(`'ref' input parameter is ignored when 'base' is set to HEAD`);
-        }
-        if (base) {
-            core.warning(`'base' input parameter is ignored when action is triggered by pull request event`);
-        }
-        const pr = github.context.payload.pull_request;
-        if (token) {
-            return await getChangedFilesFromApi(token, pr);
-        }
-        if (github.context.eventName === 'pull_request_target') {
-            // pull_request_target is executed in context of base branch and GITHUB_SHA points to last commit in base branch
-            // Therefor it's not possible to look at changes in last commit
-            // At the same time we don't want to fetch any code from forked repository
-            throw new Error(`'token' input parameter is required if action is triggered by 'pull_request_target' event`);
-        }
-        core.info('Github token is not available - changes will be detected using git diff');
-        const baseSha = (_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.base.sha;
-        const defaultBranch = (_b = github.context.payload.repository) === null || _b === void 0 ? void 0 : _b.default_branch;
-        const currentRef = await git.getCurrentRef();
-        return await git.getChanges(base || baseSha || defaultBranch, currentRef);
-    }
-    else {
-        return getChangedFilesFromGit(base, ref, initialFetchDepth);
-    }
-}
-async function getChangedFilesFromGit(base, head, initialFetchDepth) {
-    var _a;
-    const defaultBranch = (_a = github.context.payload.repository) === null || _a === void 0 ? void 0 : _a.default_branch;
-    const beforeSha = github.context.eventName === 'push' ? github.context.payload.before : null;
-    const currentRef = await git.getCurrentRef();
-    head = git.getShortName(head || github.context.ref || currentRef);
-    base = git.getShortName(base || defaultBranch);
-    if (!head) {
-        throw new Error("This action requires 'head' input to be configured, 'ref' to be set in the event payload or branch/tag checked out in current git repository");
-    }
-    if (!base) {
-        throw new Error("This action requires 'base' input to be configured or 'repository.default_branch' to be set in the event payload");
-    }
-    const isBaseSha = git.isGitSha(base);
-    const isBaseSameAsHead = base === head;
-    // If base is commit SHA we will do comparison against the referenced commit
-    // Or if base references same branch it was pushed to, we will do comparison against the previously pushed commit
-    if (isBaseSha || isBaseSameAsHead) {
-        const baseSha = isBaseSha ? base : beforeSha;
-        if (!baseSha) {
-            core.warning(`'before' field is missing in event payload - changes will be detected from last commit`);
-            if (head !== currentRef) {
-                core.warning(`Ref ${head} is not checked out - results might be incorrect!`);
-            }
-            return await git.getChangesInLastCommit();
-        }
-        // If there is no previously pushed commit,
-        // we will do comparison against the default branch or return all as added
-        if (baseSha === git.NULL_SHA) {
-            if (defaultBranch && base !== defaultBranch) {
-                core.info(`First push of a branch detected - changes will be detected against the default branch ${defaultBranch}`);
-                return await git.getChangesSinceMergeBase(defaultBranch, head, initialFetchDepth);
-            }
-            else {
-                core.info('Initial push detected - all files will be listed as added');
-                if (head !== currentRef) {
-                    core.warning(`Ref ${head} is not checked out - results might be incorrect!`);
-                }
-                return await git.listAllFilesAsAdded();
-            }
-        }
-        core.info(`Changes will be detected between ${baseSha} and ${head}`);
-        return await git.getChanges(baseSha, head);
-    }
-    core.info(`Changes will be detected between ${base} and ${head}`);
-    return await git.getChangesSinceMergeBase(base, head, initialFetchDepth);
-}
-// Uses github REST api to get list of files changed in PR
-async function getChangedFilesFromApi(token, pullRequest) {
-    core.startGroup(`Fetching list of changed files for PR#${pullRequest.number} from Github API`);
-    try {
-        const client = github.getOctokit(token);
-        const per_page = 100;
-        const files = [];
-        core.info(`Invoking listFiles(pull_number: ${pullRequest.number}, per_page: ${per_page})`);
-        for await (const response of client.paginate.iterator(client.rest.pulls.listFiles.endpoint.merge({
-            owner: github.context.repo.owner,
-            repo: github.context.repo.repo,
-            pull_number: pullRequest.number,
-            per_page
-        }))) {
-            if (response.status !== 200) {
-                throw new Error(`Fetching list of changed files from GitHub API failed with error code ${response.status}`);
-            }
-            core.info(`Received ${response.data.length} items`);
-            for (const row of response.data) {
-                core.info(`[${row.status}] ${row.filename}`);
-                // There's no obvious use-case for detection of renames
-                // Therefore we treat it as if rename detection in git diff was turned off.
-                // Rename is replaced by delete of original filename and add of new filename
-                if (row.status === file_1.ChangeStatus.Renamed) {
-                    files.push({
-                        filename: row.filename,
-                        status: file_1.ChangeStatus.Added
-                    });
-                    files.push({
-                        // 'previous_filename' for some unknown reason isn't in the type definition or documentation
-                        filename: row.previous_filename,
-                        status: file_1.ChangeStatus.Deleted
-                    });
-                }
-                else {
-                    // Github status and git status variants are same except for deleted files
-                    const status = row.status === 'removed' ? file_1.ChangeStatus.Deleted : row.status;
-                    files.push({
-                        filename: row.filename,
-                        status
-                    });
-                }
-            }
-        }
-        return files;
-    }
-    finally {
-        core.endGroup();
-    }
-}
-function exportResults(results, format) {
-    core.info('Results:');
-    const changes = [];
-    for (const [key, files] of Object.entries(results)) {
-        const value = files.length > 0;
-        core.startGroup(`Filter ${key} = ${value}`);
-        if (files.length > 0) {
-            changes.push(key);
-            core.info('Matching files:');
-            for (const file of files) {
-                core.info(`${file.filename} [${file.status}]`);
-            }
-        }
-        else {
-            core.info('Matching files: none');
-        }
-        core.setOutput(key, value);
-        core.setOutput(`${key}_count`, files.length);
-        if (format !== 'none') {
-            const filesValue = serializeExport(files, format);
-            core.setOutput(`${key}_files`, filesValue);
-        }
-        core.endGroup();
-    }
-    if (results['changes'] === undefined) {
-        const changesJson = JSON.stringify(changes);
-        core.info(`Changes output set to ${changesJson}`);
-        core.setOutput('changes', changesJson);
-    }
-    else {
-        core.info('Cannot set changes output variable - name already used by filter output');
-    }
-}
-function serializeExport(files, format) {
-    const fileNames = files.map(file => file.filename);
-    switch (format) {
-        case 'csv':
-            return fileNames.map(csv_escape_1.csvEscape).join(',');
-        case 'json':
-            return JSON.stringify(fileNames);
-        case 'escape':
-            return fileNames.map(shell_escape_1.backslashEscape).join(' ');
-        case 'shell':
-            return fileNames.map(shell_escape_1.shellEscape).join(' ');
-        default:
-            return '';
-    }
-}
-function isExportFormat(value) {
-    return ['none', 'csv', 'shell', 'json', 'escape'].includes(value);
-}
-function getErrorMessage(error) {
-    if (error instanceof Error)
-        return error.message;
-    return String(error);
-}
-run();
-
-
-/***/ }),
 
 /***/ 7351:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
@@ -810,7 +8,11 @@ run();
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -823,7 +25,7 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
 };
@@ -885,13 +87,13 @@ class Command {
     }
 }
 function escapeData(s) {
-    return utils_1.toCommandValue(s)
+    return (0, utils_1.toCommandValue)(s)
         .replace(/%/g, '%25')
         .replace(/\r/g, '%0D')
         .replace(/\n/g, '%0A');
 }
 function escapeProperty(s) {
-    return utils_1.toCommandValue(s)
+    return (0, utils_1.toCommandValue)(s)
         .replace(/%/g, '%25')
         .replace(/\r/g, '%0D')
         .replace(/\n/g, '%0A')
@@ -909,7 +111,11 @@ function escapeProperty(s) {
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -922,7 +128,7 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
 };
@@ -936,7 +142,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getIDToken = exports.getState = exports.saveState = exports.group = exports.endGroup = exports.startGroup = exports.info = exports.notice = exports.warning = exports.error = exports.debug = exports.isDebug = exports.setFailed = exports.setCommandEcho = exports.setOutput = exports.getBooleanInput = exports.getMultilineInput = exports.getInput = exports.addPath = exports.setSecret = exports.exportVariable = exports.ExitCode = void 0;
+exports.platform = exports.toPlatformPath = exports.toWin32Path = exports.toPosixPath = exports.markdownSummary = exports.summary = exports.getIDToken = exports.getState = exports.saveState = exports.group = exports.endGroup = exports.startGroup = exports.info = exports.notice = exports.warning = exports.error = exports.debug = exports.isDebug = exports.setFailed = exports.setCommandEcho = exports.setOutput = exports.getBooleanInput = exports.getMultilineInput = exports.getInput = exports.addPath = exports.setSecret = exports.exportVariable = exports.ExitCode = void 0;
 const command_1 = __nccwpck_require__(7351);
 const file_command_1 = __nccwpck_require__(717);
 const utils_1 = __nccwpck_require__(5278);
@@ -956,7 +162,7 @@ var ExitCode;
      * A code indicating that the action was a failure
      */
     ExitCode[ExitCode["Failure"] = 1] = "Failure";
-})(ExitCode = exports.ExitCode || (exports.ExitCode = {}));
+})(ExitCode || (exports.ExitCode = ExitCode = {}));
 //-----------------------------------------------------------------------
 // Variables
 //-----------------------------------------------------------------------
@@ -967,13 +173,13 @@ var ExitCode;
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function exportVariable(name, val) {
-    const convertedVal = utils_1.toCommandValue(val);
+    const convertedVal = (0, utils_1.toCommandValue)(val);
     process.env[name] = convertedVal;
     const filePath = process.env['GITHUB_ENV'] || '';
     if (filePath) {
-        return file_command_1.issueFileCommand('ENV', file_command_1.prepareKeyValueMessage(name, val));
+        return (0, file_command_1.issueFileCommand)('ENV', (0, file_command_1.prepareKeyValueMessage)(name, val));
     }
-    command_1.issueCommand('set-env', { name }, convertedVal);
+    (0, command_1.issueCommand)('set-env', { name }, convertedVal);
 }
 exports.exportVariable = exportVariable;
 /**
@@ -981,7 +187,7 @@ exports.exportVariable = exportVariable;
  * @param secret value of the secret
  */
 function setSecret(secret) {
-    command_1.issueCommand('add-mask', {}, secret);
+    (0, command_1.issueCommand)('add-mask', {}, secret);
 }
 exports.setSecret = setSecret;
 /**
@@ -991,10 +197,10 @@ exports.setSecret = setSecret;
 function addPath(inputPath) {
     const filePath = process.env['GITHUB_PATH'] || '';
     if (filePath) {
-        file_command_1.issueFileCommand('PATH', inputPath);
+        (0, file_command_1.issueFileCommand)('PATH', inputPath);
     }
     else {
-        command_1.issueCommand('add-path', {}, inputPath);
+        (0, command_1.issueCommand)('add-path', {}, inputPath);
     }
     process.env['PATH'] = `${inputPath}${path.delimiter}${process.env['PATH']}`;
 }
@@ -1069,10 +275,10 @@ exports.getBooleanInput = getBooleanInput;
 function setOutput(name, value) {
     const filePath = process.env['GITHUB_OUTPUT'] || '';
     if (filePath) {
-        return file_command_1.issueFileCommand('OUTPUT', file_command_1.prepareKeyValueMessage(name, value));
+        return (0, file_command_1.issueFileCommand)('OUTPUT', (0, file_command_1.prepareKeyValueMessage)(name, value));
     }
     process.stdout.write(os.EOL);
-    command_1.issueCommand('set-output', { name }, utils_1.toCommandValue(value));
+    (0, command_1.issueCommand)('set-output', { name }, (0, utils_1.toCommandValue)(value));
 }
 exports.setOutput = setOutput;
 /**
@@ -1081,7 +287,7 @@ exports.setOutput = setOutput;
  *
  */
 function setCommandEcho(enabled) {
-    command_1.issue('echo', enabled ? 'on' : 'off');
+    (0, command_1.issue)('echo', enabled ? 'on' : 'off');
 }
 exports.setCommandEcho = setCommandEcho;
 //-----------------------------------------------------------------------
@@ -1112,7 +318,7 @@ exports.isDebug = isDebug;
  * @param message debug message
  */
 function debug(message) {
-    command_1.issueCommand('debug', {}, message);
+    (0, command_1.issueCommand)('debug', {}, message);
 }
 exports.debug = debug;
 /**
@@ -1121,7 +327,7 @@ exports.debug = debug;
  * @param properties optional properties to add to the annotation.
  */
 function error(message, properties = {}) {
-    command_1.issueCommand('error', utils_1.toCommandProperties(properties), message instanceof Error ? message.toString() : message);
+    (0, command_1.issueCommand)('error', (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
 }
 exports.error = error;
 /**
@@ -1130,7 +336,7 @@ exports.error = error;
  * @param properties optional properties to add to the annotation.
  */
 function warning(message, properties = {}) {
-    command_1.issueCommand('warning', utils_1.toCommandProperties(properties), message instanceof Error ? message.toString() : message);
+    (0, command_1.issueCommand)('warning', (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
 }
 exports.warning = warning;
 /**
@@ -1139,7 +345,7 @@ exports.warning = warning;
  * @param properties optional properties to add to the annotation.
  */
 function notice(message, properties = {}) {
-    command_1.issueCommand('notice', utils_1.toCommandProperties(properties), message instanceof Error ? message.toString() : message);
+    (0, command_1.issueCommand)('notice', (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
 }
 exports.notice = notice;
 /**
@@ -1158,14 +364,14 @@ exports.info = info;
  * @param name The name of the output group
  */
 function startGroup(name) {
-    command_1.issue('group', name);
+    (0, command_1.issue)('group', name);
 }
 exports.startGroup = startGroup;
 /**
  * End an output group.
  */
 function endGroup() {
-    command_1.issue('endgroup');
+    (0, command_1.issue)('endgroup');
 }
 exports.endGroup = endGroup;
 /**
@@ -1203,9 +409,9 @@ exports.group = group;
 function saveState(name, value) {
     const filePath = process.env['GITHUB_STATE'] || '';
     if (filePath) {
-        return file_command_1.issueFileCommand('STATE', file_command_1.prepareKeyValueMessage(name, value));
+        return (0, file_command_1.issueFileCommand)('STATE', (0, file_command_1.prepareKeyValueMessage)(name, value));
     }
-    command_1.issueCommand('save-state', { name }, utils_1.toCommandValue(value));
+    (0, command_1.issueCommand)('save-state', { name }, (0, utils_1.toCommandValue)(value));
 }
 exports.saveState = saveState;
 /**
@@ -1241,6 +447,10 @@ var path_utils_1 = __nccwpck_require__(2981);
 Object.defineProperty(exports, "toPosixPath", ({ enumerable: true, get: function () { return path_utils_1.toPosixPath; } }));
 Object.defineProperty(exports, "toWin32Path", ({ enumerable: true, get: function () { return path_utils_1.toWin32Path; } }));
 Object.defineProperty(exports, "toPlatformPath", ({ enumerable: true, get: function () { return path_utils_1.toPlatformPath; } }));
+/**
+ * Platform utilities exports
+ */
+exports.platform = __importStar(__nccwpck_require__(5243));
 //# sourceMappingURL=core.js.map
 
 /***/ }),
@@ -1253,7 +463,11 @@ Object.defineProperty(exports, "toPlatformPath", ({ enumerable: true, get: funct
 // For internal use, subject to change.
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -1266,7 +480,7 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
 };
@@ -1274,9 +488,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareKeyValueMessage = exports.issueFileCommand = void 0;
 // We use any as a valid input type
 /* eslint-disable @typescript-eslint/no-explicit-any */
+const crypto = __importStar(__nccwpck_require__(6113));
 const fs = __importStar(__nccwpck_require__(7147));
 const os = __importStar(__nccwpck_require__(2037));
-const uuid_1 = __nccwpck_require__(5840);
 const utils_1 = __nccwpck_require__(5278);
 function issueFileCommand(command, message) {
     const filePath = process.env[`GITHUB_${command}`];
@@ -1286,14 +500,14 @@ function issueFileCommand(command, message) {
     if (!fs.existsSync(filePath)) {
         throw new Error(`Missing file at path: ${filePath}`);
     }
-    fs.appendFileSync(filePath, `${utils_1.toCommandValue(message)}${os.EOL}`, {
+    fs.appendFileSync(filePath, `${(0, utils_1.toCommandValue)(message)}${os.EOL}`, {
         encoding: 'utf8'
     });
 }
 exports.issueFileCommand = issueFileCommand;
 function prepareKeyValueMessage(key, value) {
-    const delimiter = `ghadelimiter_${uuid_1.v4()}`;
-    const convertedValue = utils_1.toCommandValue(value);
+    const delimiter = `ghadelimiter_${crypto.randomUUID()}`;
+    const convertedValue = (0, utils_1.toCommandValue)(value);
     // These should realistically never happen, but just in case someone finds a
     // way to exploit uuid generation let's not allow keys or values that contain
     // the delimiter.
@@ -1378,9 +592,9 @@ class OidcClient {
                     const encodedAudience = encodeURIComponent(audience);
                     id_token_url = `${id_token_url}&audience=${encodedAudience}`;
                 }
-                core_1.debug(`ID token url is ${id_token_url}`);
+                (0, core_1.debug)(`ID token url is ${id_token_url}`);
                 const id_token = yield OidcClient.getCall(id_token_url);
-                core_1.setSecret(id_token);
+                (0, core_1.setSecret)(id_token);
                 return id_token;
             }
             catch (error) {
@@ -1401,7 +615,11 @@ exports.OidcClient = OidcClient;
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -1414,7 +632,7 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
 };
@@ -1456,6 +674,107 @@ function toPlatformPath(pth) {
 }
 exports.toPlatformPath = toPlatformPath;
 //# sourceMappingURL=path-utils.js.map
+
+/***/ }),
+
+/***/ 5243:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getDetails = exports.isLinux = exports.isMacOS = exports.isWindows = exports.arch = exports.platform = void 0;
+const os_1 = __importDefault(__nccwpck_require__(2037));
+const exec = __importStar(__nccwpck_require__(1514));
+const getWindowsInfo = () => __awaiter(void 0, void 0, void 0, function* () {
+    const { stdout: version } = yield exec.getExecOutput('powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem).Version"', undefined, {
+        silent: true
+    });
+    const { stdout: name } = yield exec.getExecOutput('powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem).Caption"', undefined, {
+        silent: true
+    });
+    return {
+        name: name.trim(),
+        version: version.trim()
+    };
+});
+const getMacOsInfo = () => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d;
+    const { stdout } = yield exec.getExecOutput('sw_vers', undefined, {
+        silent: true
+    });
+    const version = (_b = (_a = stdout.match(/ProductVersion:\s*(.+)/)) === null || _a === void 0 ? void 0 : _a[1]) !== null && _b !== void 0 ? _b : '';
+    const name = (_d = (_c = stdout.match(/ProductName:\s*(.+)/)) === null || _c === void 0 ? void 0 : _c[1]) !== null && _d !== void 0 ? _d : '';
+    return {
+        name,
+        version
+    };
+});
+const getLinuxInfo = () => __awaiter(void 0, void 0, void 0, function* () {
+    const { stdout } = yield exec.getExecOutput('lsb_release', ['-i', '-r', '-s'], {
+        silent: true
+    });
+    const [name, version] = stdout.trim().split('\n');
+    return {
+        name,
+        version
+    };
+});
+exports.platform = os_1.default.platform();
+exports.arch = os_1.default.arch();
+exports.isWindows = exports.platform === 'win32';
+exports.isMacOS = exports.platform === 'darwin';
+exports.isLinux = exports.platform === 'linux';
+function getDetails() {
+    return __awaiter(this, void 0, void 0, function* () {
+        return Object.assign(Object.assign({}, (yield (exports.isWindows
+            ? getWindowsInfo()
+            : exports.isMacOS
+                ? getMacOsInfo()
+                : getLinuxInfo()))), { platform: exports.platform,
+            arch: exports.arch,
+            isWindows: exports.isWindows,
+            isMacOS: exports.isMacOS,
+            isLinux: exports.isLinux });
+    });
+}
+exports.getDetails = getDetails;
+//# sourceMappingURL=platform.js.map
 
 /***/ }),
 
@@ -4408,7 +3727,7 @@ module.exports = __toCommonJS(dist_src_exports);
 var import_universal_user_agent = __nccwpck_require__(5030);
 
 // pkg/dist-src/version.js
-var VERSION = "9.0.4";
+var VERSION = "9.0.6";
 
 // pkg/dist-src/defaults.js
 var userAgent = `octokit-endpoint.js/${VERSION} ${(0, import_universal_user_agent.getUserAgent)()}`;
@@ -4513,9 +3832,9 @@ function addQueryParameters(url, parameters) {
 }
 
 // pkg/dist-src/util/extract-url-variable-names.js
-var urlVariableRegex = /\{[^}]+\}/g;
+var urlVariableRegex = /\{[^{}}]+\}/g;
 function removeNonChars(variableName) {
-  return variableName.replace(/^\W+|\W+$/g, "").split(/,/);
+  return variableName.replace(/(?:^\W+)|(?:(?<!\W)\W+$)/g, "").split(/,/);
 }
 function extractUrlVariableNames(url) {
   const matches = url.match(urlVariableRegex);
@@ -4701,7 +4020,7 @@ function parse(options) {
     }
     if (url.endsWith("/graphql")) {
       if (options.mediaType.previews?.length) {
-        const previewsFromAcceptHeader = headers.accept.match(/[\w-]+(?=-preview)/g) || [];
+        const previewsFromAcceptHeader = headers.accept.match(/(?<![\w-])[\w-]+(?=-preview)/g) || [];
         headers.accept = previewsFromAcceptHeader.concat(options.mediaType.previews).map((preview) => {
           const format = options.mediaType.format ? `.${options.mediaType.format}` : "+json";
           return `application/vnd.github.${preview}-preview${format}`;
@@ -4950,7 +4269,7 @@ __export(dist_src_exports, {
 module.exports = __toCommonJS(dist_src_exports);
 
 // pkg/dist-src/version.js
-var VERSION = "9.1.5";
+var VERSION = "9.2.2";
 
 // pkg/dist-src/normalize-paginated-list-response.js
 function normalizePaginatedListResponse(response) {
@@ -4998,7 +4317,7 @@ function iterator(octokit, route, parameters) {
           const response = await requestMethod({ method, url, headers });
           const normalizedResponse = normalizePaginatedListResponse(response);
           url = ((normalizedResponse.headers.link || "").match(
-            /<([^>]+)>;\s*rel="next"/
+            /<([^<>]+)>;\s*rel="next"/
           ) || [])[1];
           return { value: normalizedResponse };
         } catch (error) {
@@ -5111,6 +4430,8 @@ var paginatingEndpoints = [
   "GET /orgs/{org}/members/{username}/codespaces",
   "GET /orgs/{org}/migrations",
   "GET /orgs/{org}/migrations/{migration_id}/repositories",
+  "GET /orgs/{org}/organization-roles/{role_id}/teams",
+  "GET /orgs/{org}/organization-roles/{role_id}/users",
   "GET /orgs/{org}/outside_collaborators",
   "GET /orgs/{org}/packages",
   "GET /orgs/{org}/packages/{package_type}/{package_name}/versions",
@@ -7489,7 +6810,7 @@ var RequestError = class extends Error {
     if (options.request.headers.authorization) {
       requestCopy.headers = Object.assign({}, options.request.headers, {
         authorization: options.request.headers.authorization.replace(
-          / .*$/,
+          /(?<! ) .*$/,
           " [REDACTED]"
         )
       });
@@ -7557,7 +6878,7 @@ var import_endpoint = __nccwpck_require__(9440);
 var import_universal_user_agent = __nccwpck_require__(5030);
 
 // pkg/dist-src/version.js
-var VERSION = "8.1.6";
+var VERSION = "8.4.1";
 
 // pkg/dist-src/is-plain-object.js
 function isPlainObject(value) {
@@ -7582,7 +6903,7 @@ function getBufferResponse(response) {
 
 // pkg/dist-src/fetch-wrapper.js
 function fetchWrapper(requestOptions) {
-  var _a, _b, _c;
+  var _a, _b, _c, _d;
   const log = requestOptions.request && requestOptions.request.log ? requestOptions.request.log : console;
   const parseSuccessResponseBody = ((_a = requestOptions.request) == null ? void 0 : _a.parseSuccessResponseBody) !== false;
   if (isPlainObject(requestOptions.body) || Array.isArray(requestOptions.body)) {
@@ -7603,8 +6924,9 @@ function fetchWrapper(requestOptions) {
   return fetch(requestOptions.url, {
     method: requestOptions.method,
     body: requestOptions.body,
+    redirect: (_c = requestOptions.request) == null ? void 0 : _c.redirect,
     headers: requestOptions.headers,
-    signal: (_c = requestOptions.request) == null ? void 0 : _c.signal,
+    signal: (_d = requestOptions.request) == null ? void 0 : _d.signal,
     // duplex must be set if request.body is ReadableStream or Async Iterables.
     // See https://fetch.spec.whatwg.org/#dom-requestinit-duplex.
     ...requestOptions.body && { duplex: "half" }
@@ -7615,7 +6937,7 @@ function fetchWrapper(requestOptions) {
       headers[keyAndValue[0]] = keyAndValue[1];
     }
     if ("deprecation" in headers) {
-      const matches = headers.link && headers.link.match(/<([^>]+)>; rel="deprecation"/);
+      const matches = headers.link && headers.link.match(/<([^<>]+)>; rel="deprecation"/);
       const deprecationLink = matches && matches.pop();
       log.warn(
         `[@octokit/request] "${requestOptions.method} ${requestOptions.url}" is deprecated. It is scheduled to be removed on ${headers.sunset}${deprecationLink ? `. See ${deprecationLink}` : ""}`
@@ -7701,11 +7023,17 @@ async function getResponseData(response) {
 function toErrorMessage(data) {
   if (typeof data === "string")
     return data;
+  let suffix;
+  if ("documentation_url" in data) {
+    suffix = ` - ${data.documentation_url}`;
+  } else {
+    suffix = "";
+  }
   if ("message" in data) {
     if (Array.isArray(data.errors)) {
-      return `${data.message}: ${data.errors.map(JSON.stringify).join(", ")}`;
+      return `${data.message}: ${data.errors.map(JSON.stringify).join(", ")}${suffix}`;
     }
-    return data.message;
+    return `${data.message}${suffix}`;
   }
   return `Unknown error: ${JSON.stringify(data)}`;
 }
@@ -12119,18 +11447,31 @@ function onceStrict (fn) {
 "use strict";
 
 
-module.exports = __nccwpck_require__(3322);
+const pico = __nccwpck_require__(3322);
+const utils = __nccwpck_require__(479);
+
+function picomatch(glob, options, returnState = false) {
+  // default to os.platform()
+  if (options && (options.windows === null || options.windows === undefined)) {
+    // don't mutate the original options object
+    options = { ...options, windows: utils.isWindows() };
+  }
+
+  return pico(glob, options, returnState);
+}
+
+Object.assign(picomatch, pico);
+module.exports = picomatch;
 
 
 /***/ }),
 
 /***/ 6099:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ ((module) => {
 
 "use strict";
 
 
-const path = __nccwpck_require__(1017);
 const WIN_SLASH = '\\\\/';
 const WIN_NO_SLASH = `[^${WIN_SLASH}]`;
 
@@ -12153,6 +11494,7 @@ const NO_DOT_SLASH = `(?!${DOT_LITERAL}{0,1}${END_ANCHOR})`;
 const NO_DOTS_SLASH = `(?!${DOTS_SLASH})`;
 const QMARK_NO_DOT = `[^.${SLASH_LITERAL}]`;
 const STAR = `${QMARK}*?`;
+const SEP = '/';
 
 const POSIX_CHARS = {
   DOT_LITERAL,
@@ -12169,7 +11511,8 @@ const POSIX_CHARS = {
   NO_DOTS_SLASH,
   QMARK_NO_DOT,
   STAR,
-  START_ANCHOR
+  START_ANCHOR,
+  SEP
 };
 
 /**
@@ -12189,7 +11532,8 @@ const WINDOWS_CHARS = {
   NO_DOTS_SLASH: `(?!${DOT_LITERAL}{1,2}(?:[${WIN_SLASH}]|$))`,
   QMARK_NO_DOT: `[^.${WIN_SLASH}]`,
   START_ANCHOR: `(?:^|[${WIN_SLASH}])`,
-  END_ANCHOR: `(?:[${WIN_SLASH}]|$)`
+  END_ANCHOR: `(?:[${WIN_SLASH}]|$)`,
+  SEP: '\\'
 };
 
 /**
@@ -12282,8 +11626,6 @@ module.exports = {
   CHAR_UNDERSCORE: 95, /* _ */
   CHAR_VERTICAL_LINE: 124, /* | */
   CHAR_ZERO_WIDTH_NOBREAK_SPACE: 65279, /* \uFEFF */
-
-  SEP: path.sep,
 
   /**
    * Create EXTGLOB_CHARS
@@ -12388,10 +11730,9 @@ const parse = (input, options) => {
   const tokens = [bos];
 
   const capture = opts.capture ? '' : '?:';
-  const win32 = utils.isWindows(options);
 
   // create constants based on platform, for windows or posix
-  const PLATFORM_CHARS = constants.globChars(win32);
+  const PLATFORM_CHARS = constants.globChars(opts.windows);
   const EXTGLOB_CHARS = constants.extglobChars(PLATFORM_CHARS);
 
   const {
@@ -12527,8 +11868,8 @@ const parse = (input, options) => {
 
     if (tok.value || tok.output) append(tok);
     if (prev && prev.type === 'text' && tok.type === 'text') {
+      prev.output = (prev.output || prev.value) + tok.value;
       prev.value += tok.value;
-      prev.output = (prev.output || '') + tok.value;
       return;
     }
 
@@ -13016,10 +12357,6 @@ const parse = (input, options) => {
         const next = peek();
         let output = value;
 
-        if (next === '<' && !utils.supportsLookbehinds()) {
-          throw new Error('Node.js v10 or higher is required for regex lookbehinds');
-        }
-
         if ((prev.value === '(' && !/[!=<:]/.test(next)) || (next === '<' && !/<([!=]|\w+>)/.test(remaining()))) {
           output = `\\${value}`;
         }
@@ -13327,7 +12664,6 @@ parse.fastpaths = (input, options) => {
   }
 
   input = REPLACEMENTS[input] || input;
-  const win32 = utils.isWindows(options);
 
   // create constants based on platform, for windows or posix
   const {
@@ -13340,7 +12676,7 @@ parse.fastpaths = (input, options) => {
     NO_DOTS_SLASH,
     STAR,
     START_ANCHOR
-  } = constants.globChars(win32);
+  } = constants.globChars(opts.windows);
 
   const nodot = opts.dot ? NO_DOTS : NO_DOT;
   const slashDot = opts.dot ? NO_DOTS_SLASH : NO_DOT;
@@ -13416,7 +12752,6 @@ module.exports = parse;
 "use strict";
 
 
-const path = __nccwpck_require__(1017);
 const scan = __nccwpck_require__(2429);
 const parse = __nccwpck_require__(2139);
 const utils = __nccwpck_require__(479);
@@ -13465,7 +12800,7 @@ const picomatch = (glob, options, returnState = false) => {
   }
 
   const opts = options || {};
-  const posix = utils.isWindows(options);
+  const posix = opts.windows;
   const regex = isState
     ? picomatch.compileRe(glob, options)
     : picomatch.makeRe(glob, options, false, true);
@@ -13574,9 +12909,9 @@ picomatch.test = (input, regex, options, { glob, posix } = {}) => {
  * @api public
  */
 
-picomatch.matchBase = (input, glob, options, posix = utils.isWindows(options)) => {
+picomatch.matchBase = (input, glob, options) => {
   const regex = glob instanceof RegExp ? glob : picomatch.makeRe(glob, options);
-  return regex.test(path.basename(input));
+  return regex.test(utils.basename(input));
 };
 
 /**
@@ -14163,10 +13498,9 @@ module.exports = scan;
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
+/*global navigator*/
 
 
-const path = __nccwpck_require__(1017);
-const win32 = process.platform === 'win32';
 const {
   REGEX_BACKSLASH,
   REGEX_REMOVE_BACKSLASH,
@@ -14180,25 +13514,23 @@ exports.isRegexChar = str => str.length === 1 && exports.hasRegexChars(str);
 exports.escapeRegex = str => str.replace(REGEX_SPECIAL_CHARS_GLOBAL, '\\$1');
 exports.toPosixSlashes = str => str.replace(REGEX_BACKSLASH, '/');
 
+exports.isWindows = () => {
+  if (typeof navigator !== 'undefined' && navigator.platform) {
+    const platform = navigator.platform.toLowerCase();
+    return platform === 'win32' || platform === 'windows';
+  }
+
+  if (typeof process !== 'undefined' && process.platform) {
+    return process.platform === 'win32';
+  }
+
+  return false;
+};
+
 exports.removeBackslashes = str => {
   return str.replace(REGEX_REMOVE_BACKSLASH, match => {
     return match === '\\' ? '' : match;
   });
-};
-
-exports.supportsLookbehinds = () => {
-  const segs = process.version.slice(1).split('.').map(Number);
-  if (segs.length === 3 && segs[0] >= 9 || (segs[0] === 8 && segs[1] >= 10)) {
-    return true;
-  }
-  return false;
-};
-
-exports.isWindows = options => {
-  if (options && typeof options.windows === 'boolean') {
-    return options.windows;
-  }
-  return win32 === true || path.sep === '\\';
 };
 
 exports.escapeLast = (input, char, lastIdx) => {
@@ -14226,6 +13558,17 @@ exports.wrapOutput = (input, state = {}, options = {}) => {
     output = `(?:^(?!${output}).*$)`;
   }
   return output;
+};
+
+exports.basename = (path, { windows } = {}) => {
+  const segs = path.split(windows ? /[\\/]/ : '/');
+  const last = segs[segs.length - 1];
+
+  if (last === '') {
+    return segs[segs.length - 2];
+  }
+
+  return last;
 };
 
 
@@ -20845,6 +20188,132 @@ module.exports = buildConnector
 
 /***/ }),
 
+/***/ 4462:
+/***/ ((module) => {
+
+"use strict";
+
+
+/** @type {Record<string, string | undefined>} */
+const headerNameLowerCasedRecord = {}
+
+// https://developer.mozilla.org/docs/Web/HTTP/Headers
+const wellknownHeaderNames = [
+  'Accept',
+  'Accept-Encoding',
+  'Accept-Language',
+  'Accept-Ranges',
+  'Access-Control-Allow-Credentials',
+  'Access-Control-Allow-Headers',
+  'Access-Control-Allow-Methods',
+  'Access-Control-Allow-Origin',
+  'Access-Control-Expose-Headers',
+  'Access-Control-Max-Age',
+  'Access-Control-Request-Headers',
+  'Access-Control-Request-Method',
+  'Age',
+  'Allow',
+  'Alt-Svc',
+  'Alt-Used',
+  'Authorization',
+  'Cache-Control',
+  'Clear-Site-Data',
+  'Connection',
+  'Content-Disposition',
+  'Content-Encoding',
+  'Content-Language',
+  'Content-Length',
+  'Content-Location',
+  'Content-Range',
+  'Content-Security-Policy',
+  'Content-Security-Policy-Report-Only',
+  'Content-Type',
+  'Cookie',
+  'Cross-Origin-Embedder-Policy',
+  'Cross-Origin-Opener-Policy',
+  'Cross-Origin-Resource-Policy',
+  'Date',
+  'Device-Memory',
+  'Downlink',
+  'ECT',
+  'ETag',
+  'Expect',
+  'Expect-CT',
+  'Expires',
+  'Forwarded',
+  'From',
+  'Host',
+  'If-Match',
+  'If-Modified-Since',
+  'If-None-Match',
+  'If-Range',
+  'If-Unmodified-Since',
+  'Keep-Alive',
+  'Last-Modified',
+  'Link',
+  'Location',
+  'Max-Forwards',
+  'Origin',
+  'Permissions-Policy',
+  'Pragma',
+  'Proxy-Authenticate',
+  'Proxy-Authorization',
+  'RTT',
+  'Range',
+  'Referer',
+  'Referrer-Policy',
+  'Refresh',
+  'Retry-After',
+  'Sec-WebSocket-Accept',
+  'Sec-WebSocket-Extensions',
+  'Sec-WebSocket-Key',
+  'Sec-WebSocket-Protocol',
+  'Sec-WebSocket-Version',
+  'Server',
+  'Server-Timing',
+  'Service-Worker-Allowed',
+  'Service-Worker-Navigation-Preload',
+  'Set-Cookie',
+  'SourceMap',
+  'Strict-Transport-Security',
+  'Supports-Loading-Mode',
+  'TE',
+  'Timing-Allow-Origin',
+  'Trailer',
+  'Transfer-Encoding',
+  'Upgrade',
+  'Upgrade-Insecure-Requests',
+  'User-Agent',
+  'Vary',
+  'Via',
+  'WWW-Authenticate',
+  'X-Content-Type-Options',
+  'X-DNS-Prefetch-Control',
+  'X-Frame-Options',
+  'X-Permitted-Cross-Domain-Policies',
+  'X-Powered-By',
+  'X-Requested-With',
+  'X-XSS-Protection'
+]
+
+for (let i = 0; i < wellknownHeaderNames.length; ++i) {
+  const key = wellknownHeaderNames[i]
+  const lowerCasedKey = key.toLowerCase()
+  headerNameLowerCasedRecord[key] = headerNameLowerCasedRecord[lowerCasedKey] =
+    lowerCasedKey
+}
+
+// Note: object prototypes should not be able to be referenced. e.g. `Object#hasOwnProperty`.
+Object.setPrototypeOf(headerNameLowerCasedRecord, null)
+
+module.exports = {
+  wellknownHeaderNames,
+  headerNameLowerCasedRecord
+}
+
+
+/***/ }),
+
 /***/ 8045:
 /***/ ((module) => {
 
@@ -21675,6 +21144,7 @@ const { InvalidArgumentError } = __nccwpck_require__(8045)
 const { Blob } = __nccwpck_require__(4300)
 const nodeUtil = __nccwpck_require__(3837)
 const { stringify } = __nccwpck_require__(3477)
+const { headerNameLowerCasedRecord } = __nccwpck_require__(4462)
 
 const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(v => Number(v))
 
@@ -21882,6 +21352,15 @@ const KEEPALIVE_TIMEOUT_EXPR = /timeout=(\d+)/
 function parseKeepAliveTimeout (val) {
   const m = val.toString().match(KEEPALIVE_TIMEOUT_EXPR)
   return m ? parseInt(m[1], 10) * 1000 : null
+}
+
+/**
+ * Retrieves a header name and returns its lowercase value.
+ * @param {string | Buffer} value Header name
+ * @returns {string}
+ */
+function headerNameToString (value) {
+  return headerNameLowerCasedRecord[value] || value.toLowerCase()
 }
 
 function parseHeaders (headers, obj = {}) {
@@ -22155,6 +21634,7 @@ module.exports = {
   isIterable,
   isAsyncIterable,
   isDestroyed,
+  headerNameToString,
   parseRawHeaders,
   parseHeaders,
   parseKeepAliveTimeout,
@@ -22434,6 +21914,14 @@ const { isUint8Array, isArrayBuffer } = __nccwpck_require__(9830)
 const { File: UndiciFile } = __nccwpck_require__(8511)
 const { parseMIMEType, serializeAMimeType } = __nccwpck_require__(685)
 
+let random
+try {
+  const crypto = __nccwpck_require__(6005)
+  random = (max) => crypto.randomInt(0, max)
+} catch {
+  random = (max) => Math.floor(Math.random(max))
+}
+
 let ReadableStream = globalThis.ReadableStream
 
 /** @type {globalThis['File']} */
@@ -22519,7 +22007,7 @@ function extractBody (object, keepalive = false) {
     // Set source to a copy of the bytes held by object.
     source = new Uint8Array(object.buffer.slice(object.byteOffset, object.byteOffset + object.byteLength))
   } else if (util.isFormDataLike(object)) {
-    const boundary = `----formdata-undici-0${`${Math.floor(Math.random() * 1e11)}`.padStart(11, '0')}`
+    const boundary = `----formdata-undici-0${`${random(1e11)}`.padStart(11, '0')}`
     const prefix = `--${boundary}\r\nContent-Disposition: form-data`
 
     /*! formdata-polyfill. MIT License. Jimmy Wärting <https://jimmy.warting.se/opensource> */
@@ -26291,6 +25779,9 @@ function httpRedirectFetch (fetchParams, response) {
     // https://fetch.spec.whatwg.org/#cors-non-wildcard-request-header-name
     request.headersList.delete('authorization')
 
+    // https://fetch.spec.whatwg.org/#authentication-entries
+    request.headersList.delete('proxy-authorization', true)
+
     // "Cookie" and "Host" are forbidden request-headers, which undici doesn't implement.
     request.headersList.delete('cookie')
     request.headersList.delete('host')
@@ -28799,14 +28290,18 @@ const { isBlobLike, toUSVString, ReadableStreamFrom } = __nccwpck_require__(3983
 const assert = __nccwpck_require__(9491)
 const { isUint8Array } = __nccwpck_require__(9830)
 
+let supportedHashes = []
+
 // https://nodejs.org/api/crypto.html#determining-if-crypto-support-is-unavailable
 /** @type {import('crypto')|undefined} */
 let crypto
 
 try {
   crypto = __nccwpck_require__(6113)
+  const possibleRelevantHashes = ['sha256', 'sha384', 'sha512']
+  supportedHashes = crypto.getHashes().filter((hash) => possibleRelevantHashes.includes(hash))
+/* c8 ignore next 3 */
 } catch {
-
 }
 
 function responseURL (response) {
@@ -29334,66 +28829,56 @@ function bytesMatch (bytes, metadataList) {
     return true
   }
 
-  // 3. If parsedMetadata is the empty set, return true.
+  // 3. If response is not eligible for integrity validation, return false.
+  // TODO
+
+  // 4. If parsedMetadata is the empty set, return true.
   if (parsedMetadata.length === 0) {
     return true
   }
 
-  // 4. Let metadata be the result of getting the strongest
+  // 5. Let metadata be the result of getting the strongest
   //    metadata from parsedMetadata.
-  const list = parsedMetadata.sort((c, d) => d.algo.localeCompare(c.algo))
-  // get the strongest algorithm
-  const strongest = list[0].algo
-  // get all entries that use the strongest algorithm; ignore weaker
-  const metadata = list.filter((item) => item.algo === strongest)
+  const strongest = getStrongestMetadata(parsedMetadata)
+  const metadata = filterMetadataListByAlgorithm(parsedMetadata, strongest)
 
-  // 5. For each item in metadata:
+  // 6. For each item in metadata:
   for (const item of metadata) {
     // 1. Let algorithm be the alg component of item.
     const algorithm = item.algo
 
     // 2. Let expectedValue be the val component of item.
-    let expectedValue = item.hash
+    const expectedValue = item.hash
 
     // See https://github.com/web-platform-tests/wpt/commit/e4c5cc7a5e48093220528dfdd1c4012dc3837a0e
     // "be liberal with padding". This is annoying, and it's not even in the spec.
 
-    if (expectedValue.endsWith('==')) {
-      expectedValue = expectedValue.slice(0, -2)
-    }
-
     // 3. Let actualValue be the result of applying algorithm to bytes.
     let actualValue = crypto.createHash(algorithm).update(bytes).digest('base64')
 
-    if (actualValue.endsWith('==')) {
-      actualValue = actualValue.slice(0, -2)
+    if (actualValue[actualValue.length - 1] === '=') {
+      if (actualValue[actualValue.length - 2] === '=') {
+        actualValue = actualValue.slice(0, -2)
+      } else {
+        actualValue = actualValue.slice(0, -1)
+      }
     }
 
     // 4. If actualValue is a case-sensitive match for expectedValue,
     //    return true.
-    if (actualValue === expectedValue) {
-      return true
-    }
-
-    let actualBase64URL = crypto.createHash(algorithm).update(bytes).digest('base64url')
-
-    if (actualBase64URL.endsWith('==')) {
-      actualBase64URL = actualBase64URL.slice(0, -2)
-    }
-
-    if (actualBase64URL === expectedValue) {
+    if (compareBase64Mixed(actualValue, expectedValue)) {
       return true
     }
   }
 
-  // 6. Return false.
+  // 7. Return false.
   return false
 }
 
 // https://w3c.github.io/webappsec-subresource-integrity/#grammardef-hash-with-options
 // https://www.w3.org/TR/CSP2/#source-list-syntax
 // https://www.rfc-editor.org/rfc/rfc5234#appendix-B.1
-const parseHashWithOptions = /((?<algo>sha256|sha384|sha512)-(?<hash>[A-z0-9+/]{1}.*={0,2}))( +[\x21-\x7e]?)?/i
+const parseHashWithOptions = /(?<algo>sha256|sha384|sha512)-((?<hash>[A-Za-z0-9+/]+|[A-Za-z0-9_-]+)={0,2}(?:\s|$)( +[!-~]*)?)?/i
 
 /**
  * @see https://w3c.github.io/webappsec-subresource-integrity/#parse-metadata
@@ -29407,8 +28892,6 @@ function parseMetadata (metadata) {
   // 2. Let empty be equal to true.
   let empty = true
 
-  const supportedHashes = crypto.getHashes()
-
   // 3. For each token returned by splitting metadata on spaces:
   for (const token of metadata.split(' ')) {
     // 1. Set empty to false.
@@ -29418,7 +28901,11 @@ function parseMetadata (metadata) {
     const parsedToken = parseHashWithOptions.exec(token)
 
     // 3. If token does not parse, continue to the next token.
-    if (parsedToken === null || parsedToken.groups === undefined) {
+    if (
+      parsedToken === null ||
+      parsedToken.groups === undefined ||
+      parsedToken.groups.algo === undefined
+    ) {
       // Note: Chromium blocks the request at this point, but Firefox
       // gives a warning that an invalid integrity was given. The
       // correct behavior is to ignore these, and subsequently not
@@ -29427,11 +28914,11 @@ function parseMetadata (metadata) {
     }
 
     // 4. Let algorithm be the hash-algo component of token.
-    const algorithm = parsedToken.groups.algo
+    const algorithm = parsedToken.groups.algo.toLowerCase()
 
     // 5. If algorithm is a hash function recognized by the user
     //    agent, add the parsed token to result.
-    if (supportedHashes.includes(algorithm.toLowerCase())) {
+    if (supportedHashes.includes(algorithm)) {
       result.push(parsedToken.groups)
     }
   }
@@ -29442,6 +28929,82 @@ function parseMetadata (metadata) {
   }
 
   return result
+}
+
+/**
+ * @param {{ algo: 'sha256' | 'sha384' | 'sha512' }[]} metadataList
+ */
+function getStrongestMetadata (metadataList) {
+  // Let algorithm be the algo component of the first item in metadataList.
+  // Can be sha256
+  let algorithm = metadataList[0].algo
+  // If the algorithm is sha512, then it is the strongest
+  // and we can return immediately
+  if (algorithm[3] === '5') {
+    return algorithm
+  }
+
+  for (let i = 1; i < metadataList.length; ++i) {
+    const metadata = metadataList[i]
+    // If the algorithm is sha512, then it is the strongest
+    // and we can break the loop immediately
+    if (metadata.algo[3] === '5') {
+      algorithm = 'sha512'
+      break
+    // If the algorithm is sha384, then a potential sha256 or sha384 is ignored
+    } else if (algorithm[3] === '3') {
+      continue
+    // algorithm is sha256, check if algorithm is sha384 and if so, set it as
+    // the strongest
+    } else if (metadata.algo[3] === '3') {
+      algorithm = 'sha384'
+    }
+  }
+  return algorithm
+}
+
+function filterMetadataListByAlgorithm (metadataList, algorithm) {
+  if (metadataList.length === 1) {
+    return metadataList
+  }
+
+  let pos = 0
+  for (let i = 0; i < metadataList.length; ++i) {
+    if (metadataList[i].algo === algorithm) {
+      metadataList[pos++] = metadataList[i]
+    }
+  }
+
+  metadataList.length = pos
+
+  return metadataList
+}
+
+/**
+ * Compares two base64 strings, allowing for base64url
+ * in the second string.
+ *
+* @param {string} actualValue always base64
+ * @param {string} expectedValue base64 or base64url
+ * @returns {boolean}
+ */
+function compareBase64Mixed (actualValue, expectedValue) {
+  if (actualValue.length !== expectedValue.length) {
+    return false
+  }
+  for (let i = 0; i < actualValue.length; ++i) {
+    if (actualValue[i] !== expectedValue[i]) {
+      if (
+        (actualValue[i] === '+' && expectedValue[i] === '-') ||
+        (actualValue[i] === '/' && expectedValue[i] === '_')
+      ) {
+        continue
+      }
+      return false
+    }
+  }
+
+  return true
 }
 
 // https://w3c.github.io/webappsec-upgrade-insecure-requests/#upgrade-request
@@ -29859,7 +29422,8 @@ module.exports = {
   urlHasHttpsScheme,
   urlIsHttpHttpsScheme,
   readAllBytes,
-  normalizeMethodRecord
+  normalizeMethodRecord,
+  parseMetadata
 }
 
 
@@ -31946,12 +31510,17 @@ function parseLocation (statusCode, headers) {
 
 // https://tools.ietf.org/html/rfc7231#section-6.4.4
 function shouldRemoveHeader (header, removeContent, unknownOrigin) {
-  return (
-    (header.length === 4 && header.toString().toLowerCase() === 'host') ||
-    (removeContent && header.toString().toLowerCase().indexOf('content-') === 0) ||
-    (unknownOrigin && header.length === 13 && header.toString().toLowerCase() === 'authorization') ||
-    (unknownOrigin && header.length === 6 && header.toString().toLowerCase() === 'cookie')
-  )
+  if (header.length === 4) {
+    return util.headerNameToString(header) === 'host'
+  }
+  if (removeContent && util.headerNameToString(header).startsWith('content-')) {
+    return true
+  }
+  if (unknownOrigin && (header.length === 13 || header.length === 6 || header.length === 19)) {
+    const name = util.headerNameToString(header)
+    return name === 'authorization' || name === 'cookie' || name === 'proxy-authorization'
+  }
+  return false
 }
 
 // https://tools.ietf.org/html/rfc7231#section-6.4
@@ -36479,652 +36048,6 @@ exports.getUserAgent = getUserAgent;
 
 /***/ }),
 
-/***/ 5840:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-Object.defineProperty(exports, "v1", ({
-  enumerable: true,
-  get: function () {
-    return _v.default;
-  }
-}));
-Object.defineProperty(exports, "v3", ({
-  enumerable: true,
-  get: function () {
-    return _v2.default;
-  }
-}));
-Object.defineProperty(exports, "v4", ({
-  enumerable: true,
-  get: function () {
-    return _v3.default;
-  }
-}));
-Object.defineProperty(exports, "v5", ({
-  enumerable: true,
-  get: function () {
-    return _v4.default;
-  }
-}));
-Object.defineProperty(exports, "NIL", ({
-  enumerable: true,
-  get: function () {
-    return _nil.default;
-  }
-}));
-Object.defineProperty(exports, "version", ({
-  enumerable: true,
-  get: function () {
-    return _version.default;
-  }
-}));
-Object.defineProperty(exports, "validate", ({
-  enumerable: true,
-  get: function () {
-    return _validate.default;
-  }
-}));
-Object.defineProperty(exports, "stringify", ({
-  enumerable: true,
-  get: function () {
-    return _stringify.default;
-  }
-}));
-Object.defineProperty(exports, "parse", ({
-  enumerable: true,
-  get: function () {
-    return _parse.default;
-  }
-}));
-
-var _v = _interopRequireDefault(__nccwpck_require__(8628));
-
-var _v2 = _interopRequireDefault(__nccwpck_require__(6409));
-
-var _v3 = _interopRequireDefault(__nccwpck_require__(5122));
-
-var _v4 = _interopRequireDefault(__nccwpck_require__(9120));
-
-var _nil = _interopRequireDefault(__nccwpck_require__(5332));
-
-var _version = _interopRequireDefault(__nccwpck_require__(1595));
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6900));
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(8950));
-
-var _parse = _interopRequireDefault(__nccwpck_require__(2746));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/***/ }),
-
-/***/ 4569:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6113));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function md5(bytes) {
-  if (Array.isArray(bytes)) {
-    bytes = Buffer.from(bytes);
-  } else if (typeof bytes === 'string') {
-    bytes = Buffer.from(bytes, 'utf8');
-  }
-
-  return _crypto.default.createHash('md5').update(bytes).digest();
-}
-
-var _default = md5;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 5332:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-var _default = '00000000-0000-0000-0000-000000000000';
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 2746:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6900));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function parse(uuid) {
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Invalid UUID');
-  }
-
-  let v;
-  const arr = new Uint8Array(16); // Parse ########-....-....-....-............
-
-  arr[0] = (v = parseInt(uuid.slice(0, 8), 16)) >>> 24;
-  arr[1] = v >>> 16 & 0xff;
-  arr[2] = v >>> 8 & 0xff;
-  arr[3] = v & 0xff; // Parse ........-####-....-....-............
-
-  arr[4] = (v = parseInt(uuid.slice(9, 13), 16)) >>> 8;
-  arr[5] = v & 0xff; // Parse ........-....-####-....-............
-
-  arr[6] = (v = parseInt(uuid.slice(14, 18), 16)) >>> 8;
-  arr[7] = v & 0xff; // Parse ........-....-....-####-............
-
-  arr[8] = (v = parseInt(uuid.slice(19, 23), 16)) >>> 8;
-  arr[9] = v & 0xff; // Parse ........-....-....-....-############
-  // (Use "/" to avoid 32-bit truncation when bit-shifting high-order bytes)
-
-  arr[10] = (v = parseInt(uuid.slice(24, 36), 16)) / 0x10000000000 & 0xff;
-  arr[11] = v / 0x100000000 & 0xff;
-  arr[12] = v >>> 24 & 0xff;
-  arr[13] = v >>> 16 & 0xff;
-  arr[14] = v >>> 8 & 0xff;
-  arr[15] = v & 0xff;
-  return arr;
-}
-
-var _default = parse;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 814:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-var _default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000)$/i;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 807:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = rng;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6113));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const rnds8Pool = new Uint8Array(256); // # of random values to pre-allocate
-
-let poolPtr = rnds8Pool.length;
-
-function rng() {
-  if (poolPtr > rnds8Pool.length - 16) {
-    _crypto.default.randomFillSync(rnds8Pool);
-
-    poolPtr = 0;
-  }
-
-  return rnds8Pool.slice(poolPtr, poolPtr += 16);
-}
-
-/***/ }),
-
-/***/ 5274:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6113));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function sha1(bytes) {
-  if (Array.isArray(bytes)) {
-    bytes = Buffer.from(bytes);
-  } else if (typeof bytes === 'string') {
-    bytes = Buffer.from(bytes, 'utf8');
-  }
-
-  return _crypto.default.createHash('sha1').update(bytes).digest();
-}
-
-var _default = sha1;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 8950:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6900));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/**
- * Convert array of 16 byte values to UUID string format of the form:
- * XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
- */
-const byteToHex = [];
-
-for (let i = 0; i < 256; ++i) {
-  byteToHex.push((i + 0x100).toString(16).substr(1));
-}
-
-function stringify(arr, offset = 0) {
-  // Note: Be careful editing this code!  It's been tuned for performance
-  // and works in ways you may not expect. See https://github.com/uuidjs/uuid/pull/434
-  const uuid = (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + '-' + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + '-' + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + '-' + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + '-' + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase(); // Consistency check for valid UUID.  If this throws, it's likely due to one
-  // of the following:
-  // - One or more input array values don't map to a hex octet (leading to
-  // "undefined" in the uuid)
-  // - Invalid input values for the RFC `version` or `variant` fields
-
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Stringified UUID is invalid');
-  }
-
-  return uuid;
-}
-
-var _default = stringify;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 8628:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _rng = _interopRequireDefault(__nccwpck_require__(807));
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(8950));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-// **`v1()` - Generate time-based UUID**
-//
-// Inspired by https://github.com/LiosK/UUID.js
-// and http://docs.python.org/library/uuid.html
-let _nodeId;
-
-let _clockseq; // Previous uuid creation time
-
-
-let _lastMSecs = 0;
-let _lastNSecs = 0; // See https://github.com/uuidjs/uuid for API details
-
-function v1(options, buf, offset) {
-  let i = buf && offset || 0;
-  const b = buf || new Array(16);
-  options = options || {};
-  let node = options.node || _nodeId;
-  let clockseq = options.clockseq !== undefined ? options.clockseq : _clockseq; // node and clockseq need to be initialized to random values if they're not
-  // specified.  We do this lazily to minimize issues related to insufficient
-  // system entropy.  See #189
-
-  if (node == null || clockseq == null) {
-    const seedBytes = options.random || (options.rng || _rng.default)();
-
-    if (node == null) {
-      // Per 4.5, create and 48-bit node id, (47 random bits + multicast bit = 1)
-      node = _nodeId = [seedBytes[0] | 0x01, seedBytes[1], seedBytes[2], seedBytes[3], seedBytes[4], seedBytes[5]];
-    }
-
-    if (clockseq == null) {
-      // Per 4.2.2, randomize (14 bit) clockseq
-      clockseq = _clockseq = (seedBytes[6] << 8 | seedBytes[7]) & 0x3fff;
-    }
-  } // UUID timestamps are 100 nano-second units since the Gregorian epoch,
-  // (1582-10-15 00:00).  JSNumbers aren't precise enough for this, so
-  // time is handled internally as 'msecs' (integer milliseconds) and 'nsecs'
-  // (100-nanoseconds offset from msecs) since unix epoch, 1970-01-01 00:00.
-
-
-  let msecs = options.msecs !== undefined ? options.msecs : Date.now(); // Per 4.2.1.2, use count of uuid's generated during the current clock
-  // cycle to simulate higher resolution clock
-
-  let nsecs = options.nsecs !== undefined ? options.nsecs : _lastNSecs + 1; // Time since last uuid creation (in msecs)
-
-  const dt = msecs - _lastMSecs + (nsecs - _lastNSecs) / 10000; // Per 4.2.1.2, Bump clockseq on clock regression
-
-  if (dt < 0 && options.clockseq === undefined) {
-    clockseq = clockseq + 1 & 0x3fff;
-  } // Reset nsecs if clock regresses (new clockseq) or we've moved onto a new
-  // time interval
-
-
-  if ((dt < 0 || msecs > _lastMSecs) && options.nsecs === undefined) {
-    nsecs = 0;
-  } // Per 4.2.1.2 Throw error if too many uuids are requested
-
-
-  if (nsecs >= 10000) {
-    throw new Error("uuid.v1(): Can't create more than 10M uuids/sec");
-  }
-
-  _lastMSecs = msecs;
-  _lastNSecs = nsecs;
-  _clockseq = clockseq; // Per 4.1.4 - Convert from unix epoch to Gregorian epoch
-
-  msecs += 12219292800000; // `time_low`
-
-  const tl = ((msecs & 0xfffffff) * 10000 + nsecs) % 0x100000000;
-  b[i++] = tl >>> 24 & 0xff;
-  b[i++] = tl >>> 16 & 0xff;
-  b[i++] = tl >>> 8 & 0xff;
-  b[i++] = tl & 0xff; // `time_mid`
-
-  const tmh = msecs / 0x100000000 * 10000 & 0xfffffff;
-  b[i++] = tmh >>> 8 & 0xff;
-  b[i++] = tmh & 0xff; // `time_high_and_version`
-
-  b[i++] = tmh >>> 24 & 0xf | 0x10; // include version
-
-  b[i++] = tmh >>> 16 & 0xff; // `clock_seq_hi_and_reserved` (Per 4.2.2 - include variant)
-
-  b[i++] = clockseq >>> 8 | 0x80; // `clock_seq_low`
-
-  b[i++] = clockseq & 0xff; // `node`
-
-  for (let n = 0; n < 6; ++n) {
-    b[i + n] = node[n];
-  }
-
-  return buf || (0, _stringify.default)(b);
-}
-
-var _default = v1;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 6409:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _v = _interopRequireDefault(__nccwpck_require__(5998));
-
-var _md = _interopRequireDefault(__nccwpck_require__(4569));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const v3 = (0, _v.default)('v3', 0x30, _md.default);
-var _default = v3;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 5998:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = _default;
-exports.URL = exports.DNS = void 0;
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(8950));
-
-var _parse = _interopRequireDefault(__nccwpck_require__(2746));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function stringToBytes(str) {
-  str = unescape(encodeURIComponent(str)); // UTF8 escape
-
-  const bytes = [];
-
-  for (let i = 0; i < str.length; ++i) {
-    bytes.push(str.charCodeAt(i));
-  }
-
-  return bytes;
-}
-
-const DNS = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
-exports.DNS = DNS;
-const URL = '6ba7b811-9dad-11d1-80b4-00c04fd430c8';
-exports.URL = URL;
-
-function _default(name, version, hashfunc) {
-  function generateUUID(value, namespace, buf, offset) {
-    if (typeof value === 'string') {
-      value = stringToBytes(value);
-    }
-
-    if (typeof namespace === 'string') {
-      namespace = (0, _parse.default)(namespace);
-    }
-
-    if (namespace.length !== 16) {
-      throw TypeError('Namespace must be array-like (16 iterable integer values, 0-255)');
-    } // Compute hash of namespace and value, Per 4.3
-    // Future: Use spread syntax when supported on all platforms, e.g. `bytes =
-    // hashfunc([...namespace, ... value])`
-
-
-    let bytes = new Uint8Array(16 + value.length);
-    bytes.set(namespace);
-    bytes.set(value, namespace.length);
-    bytes = hashfunc(bytes);
-    bytes[6] = bytes[6] & 0x0f | version;
-    bytes[8] = bytes[8] & 0x3f | 0x80;
-
-    if (buf) {
-      offset = offset || 0;
-
-      for (let i = 0; i < 16; ++i) {
-        buf[offset + i] = bytes[i];
-      }
-
-      return buf;
-    }
-
-    return (0, _stringify.default)(bytes);
-  } // Function#name is not settable on some platforms (#270)
-
-
-  try {
-    generateUUID.name = name; // eslint-disable-next-line no-empty
-  } catch (err) {} // For CommonJS default export support
-
-
-  generateUUID.DNS = DNS;
-  generateUUID.URL = URL;
-  return generateUUID;
-}
-
-/***/ }),
-
-/***/ 5122:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _rng = _interopRequireDefault(__nccwpck_require__(807));
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(8950));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function v4(options, buf, offset) {
-  options = options || {};
-
-  const rnds = options.random || (options.rng || _rng.default)(); // Per 4.4, set bits for version and `clock_seq_hi_and_reserved`
-
-
-  rnds[6] = rnds[6] & 0x0f | 0x40;
-  rnds[8] = rnds[8] & 0x3f | 0x80; // Copy bytes to buffer, if provided
-
-  if (buf) {
-    offset = offset || 0;
-
-    for (let i = 0; i < 16; ++i) {
-      buf[offset + i] = rnds[i];
-    }
-
-    return buf;
-  }
-
-  return (0, _stringify.default)(rnds);
-}
-
-var _default = v4;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 9120:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _v = _interopRequireDefault(__nccwpck_require__(5998));
-
-var _sha = _interopRequireDefault(__nccwpck_require__(5274));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const v5 = (0, _v.default)('v5', 0x50, _sha.default);
-var _default = v5;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 6900:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _regex = _interopRequireDefault(__nccwpck_require__(814));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function validate(uuid) {
-  return typeof uuid === 'string' && _regex.default.test(uuid);
-}
-
-var _default = validate;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 1595:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6900));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function version(uuid) {
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Invalid UUID');
-  }
-
-  return parseInt(uuid.substr(14, 1), 16);
-}
-
-var _default = version;
-exports["default"] = _default;
-
-/***/ }),
-
 /***/ 2940:
 /***/ ((module) => {
 
@@ -37161,6 +36084,806 @@ function wrappy (fn, cb) {
     return ret
   }
 }
+
+
+/***/ }),
+
+/***/ 1641:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ChangeStatus = void 0;
+var ChangeStatus;
+(function (ChangeStatus) {
+    ChangeStatus["Added"] = "added";
+    ChangeStatus["Copied"] = "copied";
+    ChangeStatus["Deleted"] = "deleted";
+    ChangeStatus["Modified"] = "modified";
+    ChangeStatus["Renamed"] = "renamed";
+    ChangeStatus["Unmerged"] = "unmerged";
+})(ChangeStatus || (exports.ChangeStatus = ChangeStatus = {}));
+
+
+/***/ }),
+
+/***/ 134:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Filter = exports.isPredicateQuantifier = exports.SUPPORTED_PREDICATE_QUANTIFIERS = exports.PredicateQuantifier = void 0;
+const jsyaml = __importStar(__nccwpck_require__(1917));
+const picomatch_1 = __importDefault(__nccwpck_require__(8569));
+// Minimatch options used in all matchers
+const MatchOptions = {
+    dot: true
+};
+/**
+ * Enumerates the possible logic quantifiers that can be used when determining
+ * if a file is a match or not with multiple patterns.
+ *
+ * The YAML configuration property that is parsed into one of these values is
+ * 'predicate-quantifier' on the top level of the configuration object of the
+ * action.
+ *
+ * The default is to use 'some' which used to be the hardcoded behavior prior to
+ * the introduction of the new mechanism.
+ *
+ * @see https://en.wikipedia.org/wiki/Quantifier_(logic)
+ */
+var PredicateQuantifier;
+(function (PredicateQuantifier) {
+    /**
+     * When choosing 'every' in the config it means that files will only get matched
+     * if all the patterns are satisfied by the path of the file, not just at least one of them.
+     */
+    PredicateQuantifier["EVERY"] = "every";
+    /**
+     * When choosing 'some' in the config it means that files will get matched as long as there is
+     * at least one pattern that matches them. This is the default behavior if you don't
+     * specify anything as a predicate quantifier.
+     */
+    PredicateQuantifier["SOME"] = "some";
+})(PredicateQuantifier || (exports.PredicateQuantifier = PredicateQuantifier = {}));
+/**
+ * An array of strings (at runtime) that contains the valid/accepted values for
+ * the configuration parameter 'predicate-quantifier'.
+ */
+exports.SUPPORTED_PREDICATE_QUANTIFIERS = Object.values(PredicateQuantifier);
+function isPredicateQuantifier(x) {
+    return exports.SUPPORTED_PREDICATE_QUANTIFIERS.includes(x);
+}
+exports.isPredicateQuantifier = isPredicateQuantifier;
+class Filter {
+    filterConfig;
+    rules = {};
+    // Creates instance of Filter and load rules from YAML if it's provided
+    constructor(yaml, filterConfig) {
+        this.filterConfig = filterConfig;
+        if (yaml) {
+            this.load(yaml);
+        }
+    }
+    // Load rules from YAML string
+    load(yaml) {
+        if (!yaml) {
+            return;
+        }
+        const doc = jsyaml.load(yaml);
+        if (typeof doc !== 'object') {
+            this.throwInvalidFormatError('Root element is not an object');
+        }
+        for (const [key, item] of Object.entries(doc)) {
+            this.rules[key] = this.parseFilterItemYaml(item);
+        }
+    }
+    match(files) {
+        const result = {};
+        for (const [key, patterns] of Object.entries(this.rules)) {
+            result[key] = files.filter(file => this.isMatch(file, patterns));
+        }
+        return result;
+    }
+    isMatch(file, patterns) {
+        const aPredicate = (rule) => {
+            return (rule.status === undefined || rule.status.includes(file.status)) && rule.isMatch(file.filename);
+        };
+        if (this.filterConfig?.predicateQuantifier === 'every') {
+            return patterns.every(aPredicate);
+        }
+        else {
+            return patterns.some(aPredicate);
+        }
+    }
+    parseFilterItemYaml(item) {
+        if (Array.isArray(item)) {
+            return flat(item.map(i => this.parseFilterItemYaml(i)));
+        }
+        if (typeof item === 'string') {
+            return [{ status: undefined, isMatch: (0, picomatch_1.default)(item, MatchOptions) }];
+        }
+        if (typeof item === 'object') {
+            return Object.entries(item).map(([key, pattern]) => {
+                if (typeof key !== 'string' || (typeof pattern !== 'string' && !Array.isArray(pattern))) {
+                    this.throwInvalidFormatError(`Expected [key:string]= pattern:string | string[], but [${key}:${typeof key}]= ${pattern}:${typeof pattern} found`);
+                }
+                return {
+                    status: key
+                        .split('|')
+                        .map(x => x.trim())
+                        .filter(x => x.length > 0)
+                        .map(x => x.toLowerCase()),
+                    isMatch: (0, picomatch_1.default)(pattern, MatchOptions)
+                };
+            });
+        }
+        this.throwInvalidFormatError(`Unexpected element type '${typeof item}'`);
+    }
+    throwInvalidFormatError(message) {
+        throw new Error(`Invalid filter YAML format: ${message}.`);
+    }
+}
+exports.Filter = Filter;
+// Creates a new array with all sub-array elements concatenated
+// In future could be replaced by Array.prototype.flat (supported on Node.js 11+)
+function flat(arr) {
+    return arr.reduce((acc, val) => acc.concat(val), []);
+}
+
+
+/***/ }),
+
+/***/ 6350:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isGitSha = exports.getShortName = exports.getCurrentRef = exports.listAllFilesAsAdded = exports.parseGitDiffOutput = exports.getChangesSinceMergeBase = exports.getChangesOnHead = exports.getChanges = exports.getChangesInLastCommit = exports.HEAD = exports.NULL_SHA = void 0;
+const exec_1 = __nccwpck_require__(1514);
+const core = __importStar(__nccwpck_require__(2186));
+const file_1 = __nccwpck_require__(1641);
+exports.NULL_SHA = '0000000000000000000000000000000000000000';
+exports.HEAD = 'HEAD';
+async function getChangesInLastCommit() {
+    core.startGroup(`Change detection in last commit`);
+    let output = '';
+    try {
+        output = (await (0, exec_1.getExecOutput)('git', ['log', '--format=', '--no-renames', '--name-status', '-z', '-n', '1'])).stdout;
+    }
+    finally {
+        fixStdOutNullTermination();
+        core.endGroup();
+    }
+    return parseGitDiffOutput(output);
+}
+exports.getChangesInLastCommit = getChangesInLastCommit;
+async function getChanges(base, head) {
+    const baseRef = await ensureRefAvailable(base);
+    const headRef = await ensureRefAvailable(head);
+    // Get differences between ref and HEAD
+    core.startGroup(`Change detection ${base}..${head}`);
+    let output = '';
+    try {
+        // Two dots '..' change detection - directly compares two versions
+        output = (await (0, exec_1.getExecOutput)('git', ['diff', '--no-renames', '--name-status', '-z', `${baseRef}..${headRef}`]))
+            .stdout;
+    }
+    finally {
+        fixStdOutNullTermination();
+        core.endGroup();
+    }
+    return parseGitDiffOutput(output);
+}
+exports.getChanges = getChanges;
+async function getChangesOnHead() {
+    // Get current changes - both staged and unstaged
+    core.startGroup(`Change detection on HEAD`);
+    let output = '';
+    try {
+        output = (await (0, exec_1.getExecOutput)('git', ['diff', '--no-renames', '--name-status', '-z', 'HEAD'])).stdout;
+    }
+    finally {
+        fixStdOutNullTermination();
+        core.endGroup();
+    }
+    return parseGitDiffOutput(output);
+}
+exports.getChangesOnHead = getChangesOnHead;
+async function getChangesSinceMergeBase(base, head, initialFetchDepth) {
+    let baseRef;
+    let headRef;
+    async function hasMergeBase() {
+        if (baseRef === undefined || headRef === undefined) {
+            return false;
+        }
+        return (await (0, exec_1.getExecOutput)('git', ['merge-base', baseRef, headRef], { ignoreReturnCode: true })).exitCode === 0;
+    }
+    let noMergeBase = false;
+    core.startGroup(`Searching for merge-base ${base}...${head}`);
+    try {
+        baseRef = await getLocalRef(base);
+        headRef = await getLocalRef(head);
+        if (!(await hasMergeBase())) {
+            await (0, exec_1.getExecOutput)('git', ['fetch', '--no-tags', `--depth=${initialFetchDepth}`, 'origin', base, head]);
+            if (baseRef === undefined || headRef === undefined) {
+                baseRef = baseRef ?? (await getLocalRef(base));
+                headRef = headRef ?? (await getLocalRef(head));
+                if (baseRef === undefined || headRef === undefined) {
+                    await (0, exec_1.getExecOutput)('git', ['fetch', '--tags', '--depth=1', 'origin', base, head], {
+                        ignoreReturnCode: true // returns exit code 1 if tags on remote were updated - we can safely ignore it
+                    });
+                    baseRef = baseRef ?? (await getLocalRef(base));
+                    headRef = headRef ?? (await getLocalRef(head));
+                    if (baseRef === undefined) {
+                        throw new Error(`Could not determine what is ${base} - fetch works but it's not a branch, tag or commit SHA`);
+                    }
+                    if (headRef === undefined) {
+                        throw new Error(`Could not determine what is ${head} - fetch works but it's not a branch, tag or commit SHA`);
+                    }
+                }
+            }
+            let depth = initialFetchDepth;
+            let lastCommitCount = await getCommitCount();
+            while (!(await hasMergeBase())) {
+                depth = Math.min(depth * 2, Number.MAX_SAFE_INTEGER);
+                await (0, exec_1.getExecOutput)('git', ['fetch', `--deepen=${depth}`, 'origin', base, head]);
+                const commitCount = await getCommitCount();
+                if (commitCount === lastCommitCount) {
+                    core.info('No more commits were fetched');
+                    core.info('Last attempt will be to fetch full history');
+                    await (0, exec_1.getExecOutput)('git', ['fetch']);
+                    if (!(await hasMergeBase())) {
+                        noMergeBase = true;
+                    }
+                    break;
+                }
+                lastCommitCount = commitCount;
+            }
+        }
+    }
+    finally {
+        core.endGroup();
+    }
+    // Three dots '...' change detection - finds merge-base and compares against it
+    let diffArg = `${baseRef}...${headRef}`;
+    if (noMergeBase) {
+        core.warning('No merge base found - change detection will use direct <commit>..<commit> comparison');
+        diffArg = `${baseRef}..${headRef}`;
+    }
+    // Get changes introduced on ref compared to base
+    core.startGroup(`Change detection ${diffArg}`);
+    let output = '';
+    try {
+        output = (await (0, exec_1.getExecOutput)('git', ['diff', '--no-renames', '--name-status', '-z', diffArg])).stdout;
+    }
+    finally {
+        fixStdOutNullTermination();
+        core.endGroup();
+    }
+    return parseGitDiffOutput(output);
+}
+exports.getChangesSinceMergeBase = getChangesSinceMergeBase;
+function parseGitDiffOutput(output) {
+    const tokens = output.split('\u0000').filter(s => s.length > 0);
+    const files = [];
+    for (let i = 0; i + 1 < tokens.length; i += 2) {
+        files.push({
+            status: statusMap[tokens[i]],
+            filename: tokens[i + 1]
+        });
+    }
+    return files;
+}
+exports.parseGitDiffOutput = parseGitDiffOutput;
+async function listAllFilesAsAdded() {
+    core.startGroup('Listing all files tracked by git');
+    let output = '';
+    try {
+        output = (await (0, exec_1.getExecOutput)('git', ['ls-files', '-z'])).stdout;
+    }
+    finally {
+        fixStdOutNullTermination();
+        core.endGroup();
+    }
+    return output
+        .split('\u0000')
+        .filter(s => s.length > 0)
+        .map(path => ({
+        status: file_1.ChangeStatus.Added,
+        filename: path
+    }));
+}
+exports.listAllFilesAsAdded = listAllFilesAsAdded;
+async function getCurrentRef() {
+    core.startGroup(`Get current git ref`);
+    try {
+        const branch = (await (0, exec_1.getExecOutput)('git', ['branch', '--show-current'])).stdout.trim();
+        if (branch) {
+            return branch;
+        }
+        const describe = await (0, exec_1.getExecOutput)('git', ['describe', '--tags', '--exact-match'], { ignoreReturnCode: true });
+        if (describe.exitCode === 0) {
+            return describe.stdout.trim();
+        }
+        return (await (0, exec_1.getExecOutput)('git', ['rev-parse', exports.HEAD])).stdout.trim();
+    }
+    finally {
+        core.endGroup();
+    }
+}
+exports.getCurrentRef = getCurrentRef;
+function getShortName(ref) {
+    if (!ref)
+        return '';
+    const heads = 'refs/heads/';
+    const tags = 'refs/tags/';
+    if (ref.startsWith(heads))
+        return ref.slice(heads.length);
+    if (ref.startsWith(tags))
+        return ref.slice(tags.length);
+    return ref;
+}
+exports.getShortName = getShortName;
+function isGitSha(ref) {
+    return /^[a-z0-9]{40}$/.test(ref);
+}
+exports.isGitSha = isGitSha;
+async function hasCommit(ref) {
+    return (await (0, exec_1.getExecOutput)('git', ['cat-file', '-e', `${ref}^{commit}`], { ignoreReturnCode: true })).exitCode === 0;
+}
+async function getCommitCount() {
+    const output = (await (0, exec_1.getExecOutput)('git', ['rev-list', '--count', '--all'])).stdout;
+    const count = parseInt(output);
+    return isNaN(count) ? 0 : count;
+}
+async function getLocalRef(shortName) {
+    if (isGitSha(shortName)) {
+        return (await hasCommit(shortName)) ? shortName : undefined;
+    }
+    const output = (await (0, exec_1.getExecOutput)('git', ['show-ref', shortName], { ignoreReturnCode: true })).stdout;
+    const refs = output
+        .split(/\r?\n/g)
+        .map(l => l.match(/refs\/(?:(?:heads)|(?:tags)|(?:remotes\/origin))\/(.*)$/))
+        .filter(match => match !== null && match[1] === shortName)
+        .map(match => match?.[0] ?? ''); // match can't be null here but compiler doesn't understand that
+    if (refs.length === 0) {
+        return undefined;
+    }
+    const remoteRef = refs.find(ref => ref.startsWith('refs/remotes/origin/'));
+    if (remoteRef) {
+        return remoteRef;
+    }
+    return refs[0];
+}
+async function ensureRefAvailable(name) {
+    core.startGroup(`Ensuring ${name} is fetched from origin`);
+    try {
+        let ref = await getLocalRef(name);
+        if (ref === undefined) {
+            await (0, exec_1.getExecOutput)('git', ['fetch', '--depth=1', '--no-tags', 'origin', name]);
+            ref = await getLocalRef(name);
+            if (ref === undefined) {
+                await (0, exec_1.getExecOutput)('git', ['fetch', '--depth=1', '--tags', 'origin', name]);
+                ref = await getLocalRef(name);
+                if (ref === undefined) {
+                    throw new Error(`Could not determine what is ${name} - fetch works but it's not a branch, tag or commit SHA`);
+                }
+            }
+        }
+        return ref;
+    }
+    finally {
+        core.endGroup();
+    }
+}
+function fixStdOutNullTermination() {
+    // Previous command uses NULL as delimiters and output is printed to stdout.
+    // We have to make sure next thing written to stdout will start on new line.
+    // Otherwise things like ::set-output wouldn't work.
+    core.info('');
+}
+const statusMap = {
+    A: file_1.ChangeStatus.Added,
+    C: file_1.ChangeStatus.Copied,
+    D: file_1.ChangeStatus.Deleted,
+    M: file_1.ChangeStatus.Modified,
+    R: file_1.ChangeStatus.Renamed,
+    U: file_1.ChangeStatus.Unmerged
+};
+
+
+/***/ }),
+
+/***/ 6144:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const fs = __importStar(__nccwpck_require__(7147));
+const core = __importStar(__nccwpck_require__(2186));
+const github = __importStar(__nccwpck_require__(5438));
+const filter_1 = __nccwpck_require__(134);
+const file_1 = __nccwpck_require__(1641);
+const git = __importStar(__nccwpck_require__(6350));
+const shell_escape_1 = __nccwpck_require__(4077);
+const csv_escape_1 = __nccwpck_require__(2056);
+async function run() {
+    try {
+        const workingDirectory = core.getInput('working-directory', { required: false });
+        if (workingDirectory) {
+            process.chdir(workingDirectory);
+        }
+        const token = core.getInput('token', { required: false });
+        const ref = core.getInput('ref', { required: false });
+        const base = core.getInput('base', { required: false });
+        const filtersInput = core.getInput('filters', { required: true });
+        const filtersYaml = isPathInput(filtersInput) ? getConfigFileContent(filtersInput) : filtersInput;
+        const listFiles = core.getInput('list-files', { required: false }).toLowerCase() || 'none';
+        const initialFetchDepth = parseInt(core.getInput('initial-fetch-depth', { required: false })) || 10;
+        const predicateQuantifier = core.getInput('predicate-quantifier', { required: false }) || filter_1.PredicateQuantifier.SOME;
+        if (!isExportFormat(listFiles)) {
+            core.setFailed(`Input parameter 'list-files' is set to invalid value '${listFiles}'`);
+            return;
+        }
+        if (!(0, filter_1.isPredicateQuantifier)(predicateQuantifier)) {
+            const predicateQuantifierInvalidErrorMsg = `Input parameter 'predicate-quantifier' is set to invalid value ` +
+                `'${predicateQuantifier}'. Valid values: ${filter_1.SUPPORTED_PREDICATE_QUANTIFIERS.join(', ')}`;
+            throw new Error(predicateQuantifierInvalidErrorMsg);
+        }
+        const filterConfig = { predicateQuantifier };
+        const filter = new filter_1.Filter(filtersYaml, filterConfig);
+        const files = await getChangedFiles(token, base, ref, initialFetchDepth);
+        core.info(`Detected ${files.length} changed files`);
+        const results = filter.match(files);
+        exportResults(results, listFiles);
+    }
+    catch (error) {
+        core.setFailed(getErrorMessage(error));
+    }
+}
+function isPathInput(text) {
+    return !(text.includes('\n') || text.includes(':'));
+}
+function getConfigFileContent(configPath) {
+    if (!fs.existsSync(configPath)) {
+        throw new Error(`Configuration file '${configPath}' not found`);
+    }
+    if (!fs.lstatSync(configPath).isFile()) {
+        throw new Error(`'${configPath}' is not a file.`);
+    }
+    return fs.readFileSync(configPath, { encoding: 'utf8' });
+}
+async function getChangedFiles(token, base, ref, initialFetchDepth) {
+    // if base is 'HEAD' only local uncommitted changes will be detected
+    // This is the simplest case as we don't need to fetch more commits or evaluate current/before refs
+    if (base === git.HEAD) {
+        if (ref) {
+            core.warning(`'ref' input parameter is ignored when 'base' is set to HEAD`);
+        }
+        return await git.getChangesOnHead();
+    }
+    const prEvents = ['pull_request', 'pull_request_review', 'pull_request_review_comment', 'pull_request_target'];
+    if (prEvents.includes(github.context.eventName)) {
+        if (ref) {
+            core.warning(`'ref' input parameter is ignored when 'base' is set to HEAD`);
+        }
+        if (base) {
+            core.warning(`'base' input parameter is ignored when action is triggered by pull request event`);
+        }
+        const pr = github.context.payload.pull_request;
+        if (token) {
+            return await getChangedFilesFromApi(token, pr);
+        }
+        if (github.context.eventName === 'pull_request_target') {
+            // pull_request_target is executed in context of base branch and GITHUB_SHA points to last commit in base branch
+            // Therefor it's not possible to look at changes in last commit
+            // At the same time we don't want to fetch any code from forked repository
+            throw new Error(`'token' input parameter is required if action is triggered by 'pull_request_target' event`);
+        }
+        core.info('Github token is not available - changes will be detected using git diff');
+        const baseSha = github.context.payload.pull_request?.base.sha;
+        const defaultBranch = github.context.payload.repository?.default_branch;
+        const currentRef = await git.getCurrentRef();
+        return await git.getChanges(base || baseSha || defaultBranch, currentRef);
+    }
+    else {
+        return getChangedFilesFromGit(base, ref, initialFetchDepth);
+    }
+}
+async function getChangedFilesFromGit(base, head, initialFetchDepth) {
+    const defaultBranch = github.context.payload.repository?.default_branch;
+    const beforeSha = github.context.eventName === 'push' ? github.context.payload.before : null;
+    const currentRef = await git.getCurrentRef();
+    head = git.getShortName(head || github.context.ref || currentRef);
+    base = git.getShortName(base || defaultBranch);
+    if (!head) {
+        throw new Error("This action requires 'head' input to be configured, 'ref' to be set in the event payload or branch/tag checked out in current git repository");
+    }
+    if (!base) {
+        throw new Error("This action requires 'base' input to be configured or 'repository.default_branch' to be set in the event payload");
+    }
+    const isBaseSha = git.isGitSha(base);
+    const isBaseSameAsHead = base === head;
+    // If base is commit SHA we will do comparison against the referenced commit
+    // Or if base references same branch it was pushed to, we will do comparison against the previously pushed commit
+    if (isBaseSha || isBaseSameAsHead) {
+        const baseSha = isBaseSha ? base : beforeSha;
+        if (!baseSha) {
+            core.warning(`'before' field is missing in event payload - changes will be detected from last commit`);
+            if (head !== currentRef) {
+                core.warning(`Ref ${head} is not checked out - results might be incorrect!`);
+            }
+            return await git.getChangesInLastCommit();
+        }
+        // If there is no previously pushed commit,
+        // we will do comparison against the default branch or return all as added
+        if (baseSha === git.NULL_SHA) {
+            if (defaultBranch && base !== defaultBranch) {
+                core.info(`First push of a branch detected - changes will be detected against the default branch ${defaultBranch}`);
+                return await git.getChangesSinceMergeBase(defaultBranch, head, initialFetchDepth);
+            }
+            else {
+                core.info('Initial push detected - all files will be listed as added');
+                if (head !== currentRef) {
+                    core.warning(`Ref ${head} is not checked out - results might be incorrect!`);
+                }
+                return await git.listAllFilesAsAdded();
+            }
+        }
+        core.info(`Changes will be detected between ${baseSha} and ${head}`);
+        return await git.getChanges(baseSha, head);
+    }
+    core.info(`Changes will be detected between ${base} and ${head}`);
+    return await git.getChangesSinceMergeBase(base, head, initialFetchDepth);
+}
+// Uses github REST api to get list of files changed in PR
+async function getChangedFilesFromApi(token, pullRequest) {
+    core.startGroup(`Fetching list of changed files for PR#${pullRequest.number} from Github API`);
+    try {
+        const client = github.getOctokit(token);
+        const per_page = 100;
+        const files = [];
+        core.info(`Invoking listFiles(pull_number: ${pullRequest.number}, per_page: ${per_page})`);
+        for await (const response of client.paginate.iterator(client.rest.pulls.listFiles.endpoint.merge({
+            owner: github.context.repo.owner,
+            repo: github.context.repo.repo,
+            pull_number: pullRequest.number,
+            per_page
+        }))) {
+            if (response.status !== 200) {
+                throw new Error(`Fetching list of changed files from GitHub API failed with error code ${response.status}`);
+            }
+            core.info(`Received ${response.data.length} items`);
+            for (const row of response.data) {
+                core.info(`[${row.status}] ${row.filename}`);
+                // There's no obvious use-case for detection of renames
+                // Therefore we treat it as if rename detection in git diff was turned off.
+                // Rename is replaced by delete of original filename and add of new filename
+                if (row.status === file_1.ChangeStatus.Renamed) {
+                    files.push({
+                        filename: row.filename,
+                        status: file_1.ChangeStatus.Added
+                    });
+                    files.push({
+                        // 'previous_filename' for some unknown reason isn't in the type definition or documentation
+                        filename: row.previous_filename,
+                        status: file_1.ChangeStatus.Deleted
+                    });
+                }
+                else {
+                    // Github status and git status variants are same except for deleted files
+                    const status = row.status === 'removed' ? file_1.ChangeStatus.Deleted : row.status;
+                    files.push({
+                        filename: row.filename,
+                        status
+                    });
+                }
+            }
+        }
+        return files;
+    }
+    finally {
+        core.endGroup();
+    }
+}
+function exportResults(results, format) {
+    core.info('Results:');
+    const changes = [];
+    for (const [key, files] of Object.entries(results)) {
+        const value = files.length > 0;
+        core.startGroup(`Filter ${key} = ${value}`);
+        if (files.length > 0) {
+            changes.push(key);
+            core.info('Matching files:');
+            for (const file of files) {
+                core.info(`${file.filename} [${file.status}]`);
+            }
+        }
+        else {
+            core.info('Matching files: none');
+        }
+        core.setOutput(key, value);
+        core.setOutput(`${key}_count`, files.length);
+        if (format !== 'none') {
+            const filesValue = serializeExport(files, format);
+            core.setOutput(`${key}_files`, filesValue);
+        }
+        core.endGroup();
+    }
+    if (results['changes'] === undefined) {
+        const changesJson = JSON.stringify(changes);
+        core.info(`Changes output set to ${changesJson}`);
+        core.setOutput('changes', changesJson);
+    }
+    else {
+        core.info('Cannot set changes output variable - name already used by filter output');
+    }
+}
+function serializeExport(files, format) {
+    const fileNames = files.map(file => file.filename);
+    switch (format) {
+        case 'csv':
+            return fileNames.map(csv_escape_1.csvEscape).join(',');
+        case 'json':
+            return JSON.stringify(fileNames);
+        case 'escape':
+            return fileNames.map(shell_escape_1.backslashEscape).join(' ');
+        case 'shell':
+            return fileNames.map(shell_escape_1.shellEscape).join(' ');
+        default:
+            return '';
+    }
+}
+function isExportFormat(value) {
+    return ['none', 'csv', 'shell', 'json', 'escape'].includes(value);
+}
+function getErrorMessage(error) {
+    if (error instanceof Error)
+        return error.message;
+    return String(error);
+}
+run();
+
+
+/***/ }),
+
+/***/ 2056:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.csvEscape = void 0;
+// Returns filename escaped for CSV
+// Wraps file name into "..." only when it contains some potentially unsafe character
+function csvEscape(value) {
+    if (value === '')
+        return value;
+    // Only safe characters
+    if (/^[a-zA-Z0-9._+:@%/-]+$/m.test(value)) {
+        return value;
+    }
+    // https://tools.ietf.org/html/rfc4180
+    // If double-quotes are used to enclose fields, then a double-quote
+    // appearing inside a field must be escaped by preceding it with
+    // another double quote
+    return `"${value.replace(/"/g, '""')}"`;
+}
+exports.csvEscape = csvEscape;
+
+
+/***/ }),
+
+/***/ 4077:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.shellEscape = exports.backslashEscape = void 0;
+// Backslash escape every character except small subset of definitely safe characters
+function backslashEscape(value) {
+    return value.replace(/([^a-zA-Z0-9,._+:@%/-])/gm, '\\$1');
+}
+exports.backslashEscape = backslashEscape;
+// Returns filename escaped for usage as shell argument.
+// Applies "human readable" approach with as few escaping applied as possible
+function shellEscape(value) {
+    if (value === '')
+        return value;
+    // Only safe characters
+    if (/^[a-zA-Z0-9,._+:@%/-]+$/m.test(value)) {
+        return value;
+    }
+    if (value.includes("'")) {
+        // Only safe characters, single quotes and white-spaces
+        if (/^[a-zA-Z0-9,._+:@%/'\s-]+$/m.test(value)) {
+            return `"${value}"`;
+        }
+        // Split by single quote and apply escaping recursively
+        return value.split("'").map(shellEscape).join("\\'");
+    }
+    // Contains some unsafe characters but no single quote
+    return `'${value}'`;
+}
+exports.shellEscape = shellEscape;
 
 
 /***/ }),
@@ -37266,6 +36989,14 @@ module.exports = require("https");
 
 "use strict";
 module.exports = require("net");
+
+/***/ }),
+
+/***/ 6005:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:crypto");
 
 /***/ }),
 
@@ -39066,8 +38797,9 @@ module.exports = parseParams
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
 /******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __nccwpck_require__(3109);
+/******/ 	var __webpack_exports__ = __nccwpck_require__(6144);
 /******/ 	module.exports = __webpack_exports__;
 /******/ 	
 /******/ })()
 ;
+//# sourceMappingURL=index.js.map

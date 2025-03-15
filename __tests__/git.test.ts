@@ -18,9 +18,9 @@ describe('parsing output of the git diff command', () => {
 
 describe('git utility function tests (those not invoking git)', () => {
   test('Trims "refs/" and "heads/" from ref', () => {
-    expect(git.getShortName('refs/heads/master')).toBe('master')
-    expect(git.getShortName('heads/master')).toBe('heads/master')
-    expect(git.getShortName('master')).toBe('master')
+    expect(git.getShortName('refs/heads/main')).toBe('main')
+    expect(git.getShortName('heads/main')).toBe('heads/main')
+    expect(git.getShortName('main')).toBe('main')
 
     expect(git.getShortName('refs/tags/v1')).toBe('v1')
     expect(git.getShortName('tags/v1')).toBe('tags/v1')
@@ -30,6 +30,6 @@ describe('git utility function tests (those not invoking git)', () => {
   test('isGitSha(ref) returns true only for 40 characters of a-z and 0-9', () => {
     expect(git.isGitSha('8b399ed1681b9efd6b1e048ca1c5cba47edf3855')).toBeTruthy()
     expect(git.isGitSha('This_is_very_long_name_for_a_branch_1111')).toBeFalsy()
-    expect(git.isGitSha('master')).toBeFalsy()
+    expect(git.isGitSha('main')).toBeFalsy()
   })
 })
