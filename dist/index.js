@@ -36595,6 +36595,8 @@ async function run() {
         const base = core.getInput('base', { required: false });
         const filtersInput = core.getInput('filters', { required: true });
         const filtersYaml = isPathInput(filtersInput) ? getConfigFileContent(filtersInput) : filtersInput;
+        const jsonOutput = core.getBooleanInput('json-output', { required: false }) || false;
+        const jsonOutputDir = core.getInput('json-output-dir', { required: false }) || 'path-filter-results';
         const listFiles = core.getInput('list-files', { required: false }).toLowerCase() || 'none';
         const initialFetchDepth = parseInt(core.getInput('initial-fetch-depth', { required: false })) || 10;
         const predicateQuantifier = core.getInput('predicate-quantifier', { required: false }) || filter_1.PredicateQuantifier.SOME;
@@ -36613,6 +36615,9 @@ async function run() {
         core.info(`Detected ${files.length} changed files`);
         const results = filter.match(files);
         exportResults(results, listFiles);
+        if (jsonOutput) {
+            await exportResultsToJson(results, jsonOutputDir);
+        }
     }
     catch (error) {
         core.setFailed(getErrorMessage(error));
@@ -36818,6 +36823,19 @@ function getErrorMessage(error) {
     if (error instanceof Error)
         return error.message;
     return String(error);
+}
+async function exportResultsToJson(results, outputDir) {
+    try {
+        await fs.promises.mkdir(outputDir, { recursive: true });
+        for (const [key, files] of Object.entries(results)) {
+            const filterPath = `${outputDir}/${key}.json`;
+            await fs.promises.writeFile(filterPath, JSON.stringify(files.map(file => file.filename), null, 2));
+            core.info(`Filter results written to JSON file: ${filterPath}`);
+        }
+    }
+    catch (error) {
+        core.warning(`Failed to write JSON output files: ${getErrorMessage(error)}`);
+    }
 }
 run();
 

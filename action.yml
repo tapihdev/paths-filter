@@ -36,6 +36,14 @@ inputs:
                   Backslash escapes every potentially unsafe character.
     required: false
     default: none
+  json-output:
+    description: 'Enable JSON output for filter results'
+    required: false
+    default: 'false'
+  json-output-dir:
+    description: 'Directory where JSON files will be written. Defaults to "path-filter-results"'
+    required: false
+    default: '/tmp/paths-filter'
   initial-fetch-depth:
     description: |
       How many commits are initially fetched from base branch.
