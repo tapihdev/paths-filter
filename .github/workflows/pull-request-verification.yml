@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - uses: actions/setup-node@v4
       with:
         node-version: 20
@@ -24,7 +24,7 @@ jobs:
     permissions:
       pull-requests: read
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - uses: ./
       id: filter
       with:
@@ -45,7 +45,7 @@ jobs:
     permissions:
       pull-requests: read
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - uses: ./
       id: filter
       with:
@@ -57,7 +57,7 @@ jobs:
   test-without-token:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - uses: ./
       id: filter
       with:
@@ -70,7 +70,7 @@ jobs:
   test-wd-without-token:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         path: somewhere
     - uses: ./somewhere
@@ -86,7 +86,7 @@ jobs:
   test-local-changes:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - run: echo "NEW FILE" > local
     - run: git add local
     - uses: ./
@@ -106,7 +106,7 @@ jobs:
   test-change-type:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: configure GIT user
       run: git config user.email "john@nowhere.local" && git config user.name "John Doe"
     - name: modify working tree
@@ -147,7 +147,7 @@ jobs:
   test-json-output:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: Create test files
       run: |
         mkdir -p frontend/src backend/src
