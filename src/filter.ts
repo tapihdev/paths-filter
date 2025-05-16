@@ -73,7 +73,10 @@ export class Filter {
   rules: {[key: string]: FilterRuleItem[]} = {}
 
   // Creates instance of Filter and load rules from YAML if it's provided
-  constructor(yaml?: string, readonly filterConfig?: FilterConfig) {
+  constructor(
+    yaml?: string,
+    readonly filterConfig?: FilterConfig
+  ) {
     if (yaml) {
       this.load(yaml)
     }
