@@ -1,5 +1,20 @@
 # Changelog
 
+## [v3.2.2](https://github.com/tapihdev/paths-filter/compare/v3.2.1...v3.2.2) - 2025-05-18
+- chore(deps): update dependency @types/jest to v29.5.14 by @renovate in https://github.com/tapihdev/paths-filter/pull/11
+- chore(deps): update dependency @types/picomatch to v2.3.4 by @renovate in https://github.com/tapihdev/paths-filter/pull/12
+- chore(deps): update tapihdev/tag-major-minor-semver action to v1.0.5 by @renovate in https://github.com/tapihdev/paths-filter/pull/15
+- chore(deps): update actions/checkout action to v4.2.2 by @renovate in https://github.com/tapihdev/paths-filter/pull/17
+- chore(deps): update actions/create-github-app-token action to v1.12.0 by @renovate in https://github.com/tapihdev/paths-filter/pull/18
+- chore(deps): update dependency eslint-plugin-github to v4.10.2 by @renovate in https://github.com/tapihdev/paths-filter/pull/14
+- chore(deps): update actions/setup-node action to v4.4.0 by @renovate in https://github.com/tapihdev/paths-filter/pull/19
+- chore(deps): update dependency @octokit/webhooks-types to v7.6.1 by @renovate in https://github.com/tapihdev/paths-filter/pull/20
+- chore(deps): update dependency @types/node to v20.17.47 by @renovate in https://github.com/tapihdev/paths-filter/pull/21
+- chore(deps): update dependency eslint to v8.57.1 by @renovate in https://github.com/tapihdev/paths-filter/pull/22
+- chore(deps): update dependency eslint-plugin-jest to v27.9.0 by @renovate in https://github.com/tapihdev/paths-filter/pull/23
+- chore(deps): update dependency ts-jest to v29.3.3 by @renovate in https://github.com/tapihdev/paths-filter/pull/24
+- chore(deps): update typescript-eslint monorepo to v6.21.0 by @renovate in https://github.com/tapihdev/paths-filter/pull/26
+
 ## [v3.2.1](https://github.com/tapihdev/paths-filter/compare/v3.2...v3.2.1) - 2025-03-15
 - chore: rename action to publish action to marketplace by @tapih in https://github.com/tapihdev/paths-filter/pull/7
 
